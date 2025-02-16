@@ -29,7 +29,9 @@ function App() {
 
           // MapOptionsを設定
           mapOptions.center = new window.ZDC.LatLng(lat, lng);
-          mapOptions.zipsMapType = 'VeAmBrmV';
+          mapOptions.zoom = 14;
+          mapOptions.auth = 'referer';
+          mapOptions.types = ['base'];
           mapOptions.mouseWheelReverseZoom = true;
 
           // 地図を生成
@@ -38,6 +40,7 @@ function App() {
             mapOptions,
             () => {
               // Success callback
+              console.log('Map initialized successfully');
               mapInstanceRef.current.addControl(new window.ZDC.ZoomButton('bottom-right'));
               mapInstanceRef.current.addControl(new window.ZDC.Compass('top-right'));
               mapInstanceRef.current.addControl(new window.ZDC.ScaleBar('bottom-left'));
@@ -93,17 +96,21 @@ function App() {
         const newLocation = { lat, lng };
         setLocation(newLocation);
 
-        // 地図の更新
-        const latLng = new window.ZDC.LatLng(lat, lng);
-        mapInstanceRef.current.setCenter(latLng);
-        mapInstanceRef.current.setZoom(16);
+        if (mapInstanceRef.current) {
+          // 地図の更新
+          const latLng = new window.ZDC.LatLng(lat, lng);
+          mapInstanceRef.current.setCenter(latLng);
+          mapInstanceRef.current.setZoom(16);
 
-        // マーカーの更新
-        if (markerRef.current) {
-          mapInstanceRef.current.removeControl(markerRef.current);
+          // 既存のマーカーを削除
+          if (markerRef.current) {
+            mapInstanceRef.current.removeWidget(markerRef.current);
+          }
+
+          // 新しいマーカーを作成
+          markerRef.current = new window.ZDC.Marker(latLng);
+          mapInstanceRef.current.addWidget(markerRef.current);
         }
-        markerRef.current = new window.ZDC.CenterMarker();
-        mapInstanceRef.current.addControl(markerRef.current);
 
         // 用途地域情報の取得
         const landUseResponse = await axios.get('http://localhost:3001/api/landuse', {
