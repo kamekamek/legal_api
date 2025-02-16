@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { TextField, IconButton, Container, Box, Typography, Paper } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import axios from 'axios'
+import { YOUTO_MAPPING, BOUKA_MAPPING, TOKEI_MAPPING } from './constants/zoneTypes';
 
 function App() {
   const [address, setAddress] = useState('')
@@ -128,58 +129,90 @@ function App() {
 
   return (
     <Box sx={{ 
-      bgcolor: '#F5F5F5', 
+      bgcolor: 'white',
       minHeight: '100vh',
-      py: 4
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center'
     }}>
-      <Container maxWidth="lg">
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
-            住所検索
-          </Typography>
-          <Typography variant="subtitle1" align="center" color="text.secondary" sx={{ mb: 3 }}>
-            住所を入力して地図と用途地域情報を確認できます
-          </Typography>
-          
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            maxWidth: 600,
-            mx: 'auto',
-            bgcolor: 'white',
-            borderRadius: 2,
-            overflow: 'hidden',
-            boxShadow: 1
-          }}>
-            <TextField
-              fullWidth
-              placeholder="住所を入力（例：東京都千代田区丸の内1丁目）"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              sx={{ 
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { border: 'none' },
-                },
-                '& .MuiInputBase-input': {
-                  p: 2,
-                }
-              }}
-            />
-            <IconButton 
-              onClick={handleSearch}
-              sx={{ 
-                bgcolor: '#1a237e',
-                borderRadius: 1,
-                color: 'white',
-                m: 1,
-                '&:hover': {
-                  bgcolor: '#000051'
-                }
-              }}
-            >
-              <SearchIcon />
-            </IconButton>
-          </Box>
+      <Container 
+        sx={{ 
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          width: '100%',
+          maxWidth: '800px !important',
+          p: 2
+        }}
+      >
+        <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
+          用途地域検索
+        </Typography>
+        <Typography variant="subtitle1" align="center" color="text.secondary" sx={{ mb: 3 }}>
+          住所を入力して地図と用途地域情報を確認できます
+        </Typography>
+
+        <Box sx={{ 
+          width: '100%',
+          position: 'relative',
+          paddingTop: '56.25%', // 16:9のアスペクト比
+          mb: 4,
+          borderRadius: 2,
+          overflow: 'hidden',
+          boxShadow: 1
+        }}>
+          <Box
+            ref={mapRef}
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%'
+            }}
+          />
+        </Box>
+
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          width: '100%',
+          maxWidth: 600,
+          mx: 'auto',
+          bgcolor: 'white',
+          borderRadius: 2,
+          overflow: 'hidden',
+          boxShadow: 1,
+          mb: 4
+        }}>
+          <TextField
+            fullWidth
+            placeholder="住所を入力（例：東京都千代田区丸の内1丁目）"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            sx={{ 
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': { border: 'none' },
+              },
+              '& .MuiInputBase-input': {
+                p: 2,
+              }
+            }}
+          />
+          <IconButton 
+            onClick={handleSearch}
+            sx={{ 
+              bgcolor: '#1a237e',
+              borderRadius: 1,
+              color: 'white',
+              m: 1,
+              '&:hover': {
+                bgcolor: '#000051'
+              }
+            }}
+          >
+            <SearchIcon />
+          </IconButton>
         </Box>
 
         {error && (
@@ -193,22 +226,35 @@ function App() {
           sx={{ 
             borderRadius: 4,
             overflow: 'hidden',
-            bgcolor: 'white'
+            bgcolor: 'white',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
-          <Box sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              {/* 地図 */}
-              <Box sx={{ flex: '1 1 400px', minHeight: 300 }}>
-                <div ref={mapRef} style={{ width: '100%', height: '300px' }}></div>
-              </Box>
-
+          <Box sx={{ 
+            p: 3,
+            width: '100%'
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 4, 
+              flexWrap: 'wrap',
+              justifyContent: 'center'
+            }}>
               {/* 法規制情報 */}
-              <Box sx={{ flex: '1 1 400px' }}>
-                <Box sx={{ display: 'grid', gap: 2 }}>
+              <Box sx={{ 
+                flex: '1 1 400px',
+                maxWidth: '100%'
+              }}>
+                <Box sx={{ 
+                  display: 'grid', 
+                  gap: 2,
+                  width: '100%'
+                }}>
                   <InfoRow label="所在地" value={address} />
-                  <InfoRow label="用途地域" value={landUseInfo?.type || '−'} />
-                  <InfoRow label="防火地域" value={landUseInfo?.fireArea || '−'} />
+                  <InfoRow label="用途地域" value={YOUTO_MAPPING[landUseInfo?.type] || '−'} />
+                  <InfoRow label="防火地域" value={BOUKA_MAPPING[landUseInfo?.fireArea] || '−'} />
                   <InfoRow label="建蔽率" value={landUseInfo?.buildingCoverageRatio ? `${landUseInfo.buildingCoverageRatio}%` : '−'} />
                   <InfoRow label="容積率" value={landUseInfo?.floorAreaRatio ? `${landUseInfo.floorAreaRatio}%` : '−'} />
                   <InfoRow label="建築基準法48条" value="準備中" />
@@ -228,16 +274,20 @@ function InfoRow({ label, value }) {
     <Box sx={{ 
       display: 'flex',
       borderBottom: '1px solid #eee',
-      py: 2
+      py: 2,
+      width: '100%'
     }}>
       <Typography sx={{ 
-        width: 120,
+        minWidth: 150,
         color: 'text.secondary',
         fontWeight: 500
       }}>
         {label}
       </Typography>
-      <Typography sx={{ flex: 1 }}>
+      <Typography sx={{ 
+        flex: 1,
+        pl: 2
+      }}>
         {value}
       </Typography>
     </Box>
