@@ -130,16 +130,24 @@ function App() {
     <Box sx={{ 
       bgcolor: '#F5F5F5', 
       minHeight: '100vh',
-      py: 4,
       display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'flex-start'
+      flexDirection: 'column',
+      alignItems: 'center'
     }}>
-      <Container maxWidth="lg" sx={{ 
-        width: '100%',
-        maxWidth: '800px'
-      }}>
-        <Box sx={{ mb: 4 }}>
+      <Container 
+        sx={{ 
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          width: '100%',
+          maxWidth: '800px !important',
+          p: 2
+        }}
+      >
+        <Box sx={{ 
+          width: '100%',
+          mb: 4 
+        }}>
           <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
             住所検索
           </Typography>
@@ -201,11 +209,14 @@ function App() {
             overflow: 'hidden',
             bgcolor: 'white',
             width: '100%',
-            maxWidth: '800px',
-            margin: '0 auto'
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
-          <Box sx={{ p: 3 }}>
+          <Box sx={{ 
+            p: 3,
+            width: '100%'
+          }}>
             <Box sx={{ 
               display: 'flex', 
               gap: 4, 

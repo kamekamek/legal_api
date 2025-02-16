@@ -32,24 +32,37 @@ app.get('/api/landuse', async (req, res) => {
       return res.status(400).json({ error: '緯度・経度を指定してください' });
     }
 
-    // WMS GetFeatureInfo リクエスト
-    const response = await axios.get(`${ZENRIN_WMS_URL}/wms`, {
-      params: {
-        service: 'WMS',
-        version: '1.3.0',
-        request: 'GetFeatureInfo',
-        layers: 'youto',
-        query_layers: 'youto',
-        info_format: 'application/json',
-        i: '50',
-        j: '50',
-        width: '101',
-        height: '101',
-        bbox: `${parseFloat(lng) - 0.001},${parseFloat(lat) - 0.001},${parseFloat(lng) + 0.001},${parseFloat(lat) + 0.001}`,
-        crs: 'EPSG:4326',
-        api_key: ZENRIN_API_KEY
-      }
+    console.log('WMS Request Parameters:', {
+      lat,
+      lng,
+      api_key: ZENRIN_API_KEY ? 'Set' : 'Not Set'
     });
+
+    // WMS GetFeatureInfo リクエスト
+    const wmsParams = {
+      service: 'WMS',
+      version: '1.3.0',
+      request: 'GetFeatureInfo',
+      layers: 'youto',
+      query_layers: 'youto',
+      info_format: 'application/json',
+      i: '50',
+      j: '50',
+      width: '101',
+      height: '101',
+      bbox: `${parseFloat(lng) - 0.001},${parseFloat(lat) - 0.001},${parseFloat(lng) + 0.001},${parseFloat(lat) + 0.001}`,
+      crs: 'EPSG:4326',
+      api_key: ZENRIN_API_KEY
+    };
+
+    console.log('WMS Request URL:', `${ZENRIN_WMS_URL}/wms`);
+    console.log('WMS Parameters:', wmsParams);
+
+    const response = await axios.get(`${ZENRIN_WMS_URL}/wms`, {
+      params: wmsParams
+    });
+
+    console.log('WMS Response:', response.data);
 
     if (!response.data || !response.data.features || response.data.features.length === 0) {
       return res.status(404).json({ error: '指定された地点の情報が見つかりませんでした' });
@@ -68,8 +81,19 @@ app.get('/api/landuse', async (req, res) => {
 
     res.json(regulationData);
   } catch (error) {
-    console.error('API Error:', error.response?.data || error.message);
-    res.status(500).json({ error: '用途地域情報の取得に失敗しました' });
+    console.error('API Error Details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      config: {
+        url: error.config?.url,
+        params: error.config?.params
+      }
+    });
+    res.status(500).json({ 
+      error: '用途地域情報の取得に失敗しました',
+      details: error.response?.data || error.message
+    });
   }
 });
 
