@@ -24,26 +24,26 @@ function App() {
 
         try {
           // 初期位置（東京駅）
-          const initialLat = 35.681236;
-          const initialLng = 139.767125;
+          const lat = 35.681406;
+          const lng = 139.767132;
 
-          // 地図オプションの設定
-          mapOptions.center = new window.ZDC.LatLng(initialLat, initialLng);
-          mapOptions.zoom = 11;
+          // MapOptionsを設定
+          mapOptions.center = new window.ZDC.LatLng(lat, lng);
+          mapOptions.zipsMapType = 'VeAmBrmV';
+          mapOptions.mouseWheelReverseZoom = true;
 
           // 地図を生成
           mapInstanceRef.current = new window.ZDC.Map(
             mapRef.current,
             mapOptions,
             () => {
-              // 成功時のコールバック
-              // コントロールを追加
-              mapInstanceRef.current.addControl(new window.ZDC.ZoomButton('top-left'));
+              // Success callback
+              mapInstanceRef.current.addControl(new window.ZDC.ZoomButton('bottom-right'));
               mapInstanceRef.current.addControl(new window.ZDC.Compass('top-right'));
               mapInstanceRef.current.addControl(new window.ZDC.ScaleBar('bottom-left'));
             },
             () => {
-              // 失敗時のコールバック
+              // Failure callback
               console.error('Map creation failed');
               setError('地図の作成に失敗しました');
             }
@@ -65,52 +65,54 @@ function App() {
         return;
       }
 
-      if (!window.ZDC) {
-        setError('地図APIの初期化に失敗しました');
-        return;
-      }
-
-      // 住所検索
-      const searchResult = await new Promise((resolve, reject) => {
-        const search = new window.ZDC.Search();
-        search.getLatLonByAddr({
-          address: address,
-          success: function(result) {
-            resolve(result);
-          },
-          error: function(error) {
-            reject(new Error('住所検索に失敗しました'));
-          }
-        });
+      // 住所検索APIを呼び出し
+      const response = await fetch('https://test-web.zmaps-api.com/search/address', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'x-api-key': import.meta.env.VITE_ZENRIN_API_KEY,
+          'Authorization': 'referer'
+        },
+        body: new URLSearchParams({
+          word: address,
+          word_match_type: '3'
+        })
       });
 
-      if (!searchResult || !searchResult.status || searchResult.status.code !== '000') {
+      if (!response.ok) {
+        throw new Error(`検索に失敗しました: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('検索結果:', data);
+
+      if (data.status === "OK" && data.result.info.hit > 0) {
+        const item = data.result.item[0];
+        const [lng, lat] = item.position;
+
+        const newLocation = { lat, lng };
+        setLocation(newLocation);
+
+        // 地図の更新
+        const latLng = new window.ZDC.LatLng(lat, lng);
+        mapInstanceRef.current.setCenter(latLng);
+        mapInstanceRef.current.setZoom(16);
+
+        // マーカーの更新
+        if (markerRef.current) {
+          mapInstanceRef.current.removeControl(markerRef.current);
+        }
+        markerRef.current = new window.ZDC.CenterMarker();
+        mapInstanceRef.current.addControl(markerRef.current);
+
+        // 用途地域情報の取得
+        const landUseResponse = await axios.get('http://localhost:3001/api/landuse', {
+          params: newLocation
+        });
+        setLandUseInfo(landUseResponse.data);
+      } else {
         throw new Error('住所が見つかりませんでした');
       }
-
-      const newLocation = {
-        lat: searchResult.latlon.lat,
-        lng: searchResult.latlon.lon
-      };
-      setLocation(newLocation);
-
-      // 地図の更新
-      const latlon = new window.ZDC.LatLng(newLocation.lat, newLocation.lng);
-      mapInstanceRef.current.setCenter(latlon);
-      mapInstanceRef.current.setZoom(16);
-
-      // マーカーの更新
-      if (markerRef.current) {
-        mapInstanceRef.current.removeWidget(markerRef.current);
-      }
-      markerRef.current = new window.ZDC.Marker(latlon);
-      mapInstanceRef.current.addWidget(markerRef.current);
-
-      // 用途地域情報の取得
-      const landUseResponse = await axios.get('http://localhost:3001/api/landuse', {
-        params: newLocation
-      });
-      setLandUseInfo(landUseResponse.data);
     } catch (error) {
       setError('検索中にエラーが発生しました。' + (error.message || ''));
       console.error('Search error:', error);
