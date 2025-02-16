@@ -129,7 +129,7 @@ function App() {
 
   return (
     <Box sx={{ 
-      bgcolor: '#F5F5F5', 
+      bgcolor: 'white',
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
@@ -145,56 +145,74 @@ function App() {
           p: 2
         }}
       >
+        <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
+          用途地域検索
+        </Typography>
+        <Typography variant="subtitle1" align="center" color="text.secondary" sx={{ mb: 3 }}>
+          住所を入力して地図と用途地域情報を確認できます
+        </Typography>
+
         <Box sx={{ 
           width: '100%',
-          mb: 4 
+          position: 'relative',
+          paddingTop: '56.25%', // 16:9のアスペクト比
+          mb: 4,
+          borderRadius: 2,
+          overflow: 'hidden',
+          boxShadow: 1
         }}>
-          <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
-            住所検索
-          </Typography>
-          <Typography variant="subtitle1" align="center" color="text.secondary" sx={{ mb: 3 }}>
-            住所を入力して地図と用途地域情報を確認できます
-          </Typography>
-          
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            maxWidth: 600,
-            mx: 'auto',
-            bgcolor: 'white',
-            borderRadius: 2,
-            overflow: 'hidden',
-            boxShadow: 1
-          }}>
-            <TextField
-              fullWidth
-              placeholder="住所を入力（例：東京都千代田区丸の内1丁目）"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              sx={{ 
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': { border: 'none' },
-                },
-                '& .MuiInputBase-input': {
-                  p: 2,
-                }
-              }}
-            />
-            <IconButton 
-              onClick={handleSearch}
-              sx={{ 
-                bgcolor: '#1a237e',
-                borderRadius: 1,
-                color: 'white',
-                m: 1,
-                '&:hover': {
-                  bgcolor: '#000051'
-                }
-              }}
-            >
-              <SearchIcon />
-            </IconButton>
-          </Box>
+          <Box
+            ref={mapRef}
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%'
+            }}
+          />
+        </Box>
+
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          width: '100%',
+          maxWidth: 600,
+          mx: 'auto',
+          bgcolor: 'white',
+          borderRadius: 2,
+          overflow: 'hidden',
+          boxShadow: 1,
+          mb: 4
+        }}>
+          <TextField
+            fullWidth
+            placeholder="住所を入力（例：東京都千代田区丸の内1丁目）"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            sx={{ 
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': { border: 'none' },
+              },
+              '& .MuiInputBase-input': {
+                p: 2,
+              }
+            }}
+          />
+          <IconButton 
+            onClick={handleSearch}
+            sx={{ 
+              bgcolor: '#1a237e',
+              borderRadius: 1,
+              color: 'white',
+              m: 1,
+              '&:hover': {
+                bgcolor: '#000051'
+              }
+            }}
+          >
+            <SearchIcon />
+          </IconButton>
         </Box>
 
         {error && (
@@ -224,15 +242,6 @@ function App() {
               flexWrap: 'wrap',
               justifyContent: 'center'
             }}>
-              {/* 地図 */}
-              <Box sx={{ 
-                flex: '1 1 400px', 
-                minHeight: 300,
-                maxWidth: '100%'
-              }}>
-                <div ref={mapRef} style={{ width: '100%', height: '300px' }}></div>
-              </Box>
-
               {/* 法規制情報 */}
               <Box sx={{ 
                 flex: '1 1 400px',

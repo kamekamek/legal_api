@@ -52,11 +52,18 @@ graph TD
     D -->|用途地域データ| C
     C -->|加工済みデータ| A
 
-    style A fill:#f9f,stroke:#333
-    style B fill:#bbf,stroke:#333
-    style C fill:#bfb,stroke:#333
-    style D fill:#fbb,stroke:#333
-    style E fill:#ddd,stroke:#333
+    classDef default fill:#f4f4f4,stroke:#333,stroke-width:2px;
+    classDef frontend fill:#FF9E9E,stroke:#333,stroke-width:2px,color:#333,font-weight:bold;
+    classDef backend fill:#90CAF9,stroke:#333,stroke-width:2px,color:#333,font-weight:bold;
+    classDef api fill:#A5D6A7,stroke:#333,stroke-width:2px,color:#333,font-weight:bold;
+    classDef ui fill:#FFE082,stroke:#333,stroke-width:2px,color:#333,font-weight:bold;
+
+    class A frontend;
+    class B,D api;
+    class C backend;
+    class E ui;
+
+    linkStyle default stroke:#666,stroke-width:2px;
 ```
 
 ## 分離のメリット
