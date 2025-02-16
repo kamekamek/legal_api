@@ -66,9 +66,24 @@ export const HEIGHT_DISTRICT_MAPPING = {
 
 // 高度地区情報を解析する関数
 export const parseHeightDistrict = (heightInfo) => {
-  if (!heightInfo || heightInfo === '0') return null;
+  console.log('高度地区情報の入力値:', heightInfo);
+  
+  if (!heightInfo || heightInfo === '0') {
+    console.log('高度地区情報なし');
+    return null;
+  }
+  
+  // 数値のみの場合は高度地区種別として扱う
+  if (!isNaN(heightInfo)) {
+    console.log('数値のみの高度地区情報:', heightInfo);
+    const result = [`最高高度規制: ${HEIGHT_DISTRICT_MAPPING[heightInfo]}`];
+    console.log('解析結果:', result);
+    return result;
+  }
   
   const parts = heightInfo.split(':');
+  console.log('高度地区情報の分割結果:', parts);
+  
   const result = [];
 
   // 最高高度（例: "9m"）
@@ -91,6 +106,7 @@ export const parseHeightDistrict = (heightInfo) => {
     result.push(`最低高度規制: ${HEIGHT_DISTRICT_MAPPING[parts[3]]}`);
   }
 
+  console.log('解析結果:', result);
   return result.length > 0 ? result : null;
 };
 
