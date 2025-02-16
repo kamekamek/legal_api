@@ -1,44 +1,119 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { TextField, IconButton, Container, Box, Typography, Paper } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import axios from 'axios'
-import 'leaflet/dist/leaflet.css'
-import { MapContainer, TileLayer, Marker } from 'react-leaflet'
-import L from 'leaflet'
-
-// Leafletのデフォルトアイコンの修正
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
 
 function App() {
   const [address, setAddress] = useState('')
   const [location, setLocation] = useState(null)
   const [landUseInfo, setLandUseInfo] = useState(null)
   const [error, setError] = useState('')
+  const mapRef = useRef(null)
+  const mapInstanceRef = useRef(null)
+  const markerRef = useRef(null)
+
+  useEffect(() => {
+    // 地図の初期化
+    if (mapRef.current && !mapInstanceRef.current && window.ZMALoader) {
+      window.ZMALoader.setOnLoad((mapOptions, error) => {
+        if (error) {
+          console.error('Map initialization error:', error);
+          setError('地図の初期化に失敗しました');
+          return;
+        }
+
+        try {
+          // 初期位置（東京駅）
+          const initialLat = 35.681236;
+          const initialLng = 139.767125;
+          mapOptions.center = new window.ZDC.LatLon(initialLat, initialLng);
+          mapOptions.zoom = 11;
+
+          // 地図を生成
+          mapInstanceRef.current = new window.ZDC.Map(
+            mapRef.current,
+            mapOptions,
+            () => {
+              // 成功時のコールバック
+              // コントロールを追加
+              mapInstanceRef.current.addWidget(new window.ZDC.Control.Zoom());
+              mapInstanceRef.current.addWidget(new window.ZDC.Control.Compass());
+              mapInstanceRef.current.addWidget(new window.ZDC.Control.Scale());
+            },
+            () => {
+              // 失敗時のコールバック
+              console.error('Map creation failed');
+              setError('地図の作成に失敗しました');
+            }
+          );
+        } catch (e) {
+          console.error('Map creation error:', e);
+          setError('地図の作成に失敗しました');
+        }
+      });
+    }
+  }, []);
 
   const handleSearch = async () => {
     try {
-      setError('')
-      // ジオコーディング
-      const geocodeResponse = await axios.post('http://localhost:3001/api/geocode', { address })
-      const coordinates = geocodeResponse.data.features[0].geometry.coordinates
-      const newLocation = { lat: coordinates[1], lng: coordinates[0] }
-      setLocation(newLocation)
+      setError('');
+      
+      if (!address) {
+        setError('住所を入力してください');
+        return;
+      }
+
+      // 住所検索
+      const searchResult = await new Promise((resolve, reject) => {
+        if (!window.ZDC || !window.ZDC.Search) {
+          reject(new Error('住所検索機能の初期化に失敗しました'));
+          return;
+        }
+
+        const search = new window.ZDC.Search();
+        search.getLatLonByAddr({
+          address: address,
+          success: function(result) {
+            if (!result || !result.success) {
+              reject(new Error('住所が見つかりませんでした'));
+              return;
+            }
+            resolve(result);
+          },
+          error: function(error) {
+            reject(new Error('住所検索に失敗しました'));
+          }
+        });
+      });
+
+      const newLocation = {
+        lat: searchResult.lat,
+        lng: searchResult.lon
+      };
+      setLocation(newLocation);
+
+      // 地図の更新
+      const latlon = new window.ZDC.LatLon(newLocation.lat, newLocation.lng);
+      mapInstanceRef.current.setCenter(latlon);
+      mapInstanceRef.current.setZoom(16);
+
+      // マーカーの更新
+      if (markerRef.current) {
+        mapInstanceRef.current.removeWidget(markerRef.current);
+      }
+      markerRef.current = new window.ZDC.Marker(latlon);
+      mapInstanceRef.current.addWidget(markerRef.current);
 
       // 用途地域情報の取得
       const landUseResponse = await axios.get('http://localhost:3001/api/landuse', {
         params: newLocation
-      })
-      setLandUseInfo(landUseResponse.data)
+      });
+      setLandUseInfo(landUseResponse.data);
     } catch (error) {
-      setError('検索中にエラーが発生しました。')
-      console.error('Search error:', error)
+      setError('検索中にエラーが発生しました。' + (error.message || ''));
+      console.error('Search error:', error);
     }
-  }
+  };
 
   return (
     <Box sx={{ 
@@ -67,7 +142,7 @@ function App() {
           }}>
             <TextField
               fullWidth
-              placeholder="住所を入力"
+              placeholder="住所を入力（例：東京都千代田区丸の内1丁目）"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               sx={{ 
@@ -102,54 +177,41 @@ function App() {
           </Typography>
         )}
 
-        {location && (
-          <Paper 
-            elevation={3}
-            sx={{ 
-              borderRadius: 4,
-              overflow: 'hidden',
-              bgcolor: 'white'
-            }}
-          >
-            <Box sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {/* 地図 */}
-                <Box sx={{ flex: '1 1 400px', minHeight: 300 }}>
-                  <MapContainer
-                    center={[location.lat, location.lng]}
-                    zoom={16}
-                    style={{ height: '100%', width: '100%', minHeight: 300 }}
-                  >
-                    <TileLayer
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    />
-                    <Marker position={[location.lat, location.lng]} />
-                  </MapContainer>
-                </Box>
+        <Paper 
+          elevation={3}
+          sx={{ 
+            borderRadius: 4,
+            overflow: 'hidden',
+            bgcolor: 'white'
+          }}
+        >
+          <Box sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {/* 地図 */}
+              <Box sx={{ flex: '1 1 400px', minHeight: 300 }}>
+                <div ref={mapRef} style={{ width: '100%', height: '300px' }}></div>
+              </Box>
 
-                {/* 法規制情報 */}
-                <Box sx={{ flex: '1 1 400px' }}>
-                  <Box sx={{ display: 'grid', gap: 2 }}>
-                    <InfoRow label="所在地" value={address} />
-                    <InfoRow label="用途地域" value={landUseInfo?.type || '第一種住居地域'} />
-                    <InfoRow label="防火地域" value={landUseInfo?.fireArea || '準防火地域'} />
-                    <InfoRow label="建蔽率" value={`${landUseInfo?.buildingCoverageRatio || '60'}%`} />
-                    <InfoRow label="容積率" value={`${landUseInfo?.floorAreaRatio || '200'}%`} />
-                    <InfoRow label="建築基準法48条" value="準備中" />
-                    <InfoRow label="法別表第２" value="準備中" />
-                  </Box>
+              {/* 法規制情報 */}
+              <Box sx={{ flex: '1 1 400px' }}>
+                <Box sx={{ display: 'grid', gap: 2 }}>
+                  <InfoRow label="所在地" value={address} />
+                  <InfoRow label="用途地域" value={landUseInfo?.type || '−'} />
+                  <InfoRow label="防火地域" value={landUseInfo?.fireArea || '−'} />
+                  <InfoRow label="建蔽率" value={landUseInfo?.buildingCoverageRatio ? `${landUseInfo.buildingCoverageRatio}%` : '−'} />
+                  <InfoRow label="容積率" value={landUseInfo?.floorAreaRatio ? `${landUseInfo.floorAreaRatio}%` : '−'} />
+                  <InfoRow label="建築基準法48条" value="準備中" />
+                  <InfoRow label="法別表第２" value="準備中" />
                 </Box>
               </Box>
             </Box>
-          </Paper>
-        )}
-      </Box>
+          </Box>
+        </Paper>
+      </Container>
     </Box>
-  )
+  );
 }
 
-// 情報行のコンポーネント
 function InfoRow({ label, value }) {
   return (
     <Box sx={{ 
@@ -168,7 +230,7 @@ function InfoRow({ label, value }) {
         {value}
       </Typography>
     </Box>
-  )
+  );
 }
 
 export default App
