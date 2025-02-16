@@ -69,12 +69,29 @@ export const parseHeightDistrict = (heightInfo) => {
   if (!heightInfo || heightInfo === '0') return null;
   
   const parts = heightInfo.split(':');
-  return {
-    maxHeight: parts[0] || null,
-    minHeight: parts[1] || null,
-    maxHeightType: parts[2] ? HEIGHT_DISTRICT_MAPPING[parts[2]] : null,
-    minHeightType: parts[3] ? HEIGHT_DISTRICT_MAPPING[parts[3]] : null
-  };
+  const result = [];
+
+  // 最高高度（例: "9m"）
+  if (parts[0] && parts[0].includes('m')) {
+    result.push(`最高高度: ${parts[0]}`);
+  }
+
+  // 最低高度（例: "-9m"）
+  if (parts[1] && parts[1].includes('m')) {
+    result.push(`最低高度: ${parts[1]}`);
+  }
+
+  // 最高高度規制（例: "9" → "第9種高度地区"）
+  if (parts[2] && !parts[2].includes('m')) {
+    result.push(`最高高度規制: ${HEIGHT_DISTRICT_MAPPING[parts[2]]}`);
+  }
+
+  // 最低高度規制（例: "-9" → "第9種最低高度地区"）
+  if (parts[3] && !parts[3].includes('m')) {
+    result.push(`最低高度規制: ${HEIGHT_DISTRICT_MAPPING[parts[3]]}`);
+  }
+
+  return result.length > 0 ? result : null;
 };
 
 // 区域区分情報を解析する関数

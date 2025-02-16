@@ -117,7 +117,19 @@ function App() {
         const landUseResponse = await axios.get('http://localhost:3001/api/landuse', {
           params: newLocation
         });
-        console.log('API Response:', landUseResponse.data);  
+        
+        // APIレスポンスの詳細ログ
+        console.log('APIリクエスト:', {
+          lat: newLocation.lat,
+          lng: newLocation.lng
+        });
+        
+        console.log('API Response:', {
+          ...landUseResponse.data,
+          高度地区: landUseResponse.data.koudo,
+          高度地区制限値: landUseResponse.data.koudo2
+        });
+        
         setLandUseInfo(landUseResponse.data);
       } else {
         throw new Error('住所が見つかりませんでした');
@@ -260,12 +272,14 @@ function App() {
                   <InfoRow label="建蔽率（制限値）" value={landUseInfo?.buildingCoverageRatio2 ? `${landUseInfo.buildingCoverageRatio2}%` : '−'} />
                   <InfoRow label="容積率" value={landUseInfo?.floorAreaRatio ? `${landUseInfo.floorAreaRatio}%` : '−'} />
                   <InfoRow label="高度地区" value={landUseInfo?.heightDistrict ? (() => {
-                    if (!landUseInfo.heightDistrict) return '−';
-                    return `最高高度: ${landUseInfo.heightDistrict}m`;
+                    const height = parseHeightDistrict(landUseInfo.heightDistrict);
+                    if (!height) return '−';
+                    return height.join('\n');
                   })() : '−'} />
                   <InfoRow label="高度地区（制限値）" value={landUseInfo?.heightDistrict2 ? (() => {
-                    if (!landUseInfo.heightDistrict2) return '−';
-                    return `最高高度: ${landUseInfo.heightDistrict2}m`;
+                    const height = parseHeightDistrict(landUseInfo.heightDistrict2);
+                    if (!height) return '−';
+                    return height.join('\n');
                   })() : '−'} />
                   <InfoRow label="区域区分" value={landUseInfo?.zoneMap ? (() => {
                     const parts = landUseInfo.zoneMap.split(':');
