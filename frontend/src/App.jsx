@@ -26,7 +26,9 @@ function App() {
           // 初期位置（東京駅）
           const initialLat = 35.681236;
           const initialLng = 139.767125;
-          mapOptions.center = new window.ZDC.LatLon(initialLat, initialLng);
+
+          // 地図オプションの設定
+          mapOptions.center = new window.ZDC.LatLng(initialLat, initialLng);
           mapOptions.zoom = 11;
 
           // 地図を生成
@@ -36,9 +38,9 @@ function App() {
             () => {
               // 成功時のコールバック
               // コントロールを追加
-              mapInstanceRef.current.addWidget(new window.ZDC.Control.Zoom());
-              mapInstanceRef.current.addWidget(new window.ZDC.Control.Compass());
-              mapInstanceRef.current.addWidget(new window.ZDC.Control.Scale());
+              mapInstanceRef.current.addControl(new window.ZDC.ZoomButton('top-left'));
+              mapInstanceRef.current.addControl(new window.ZDC.Compass('top-right'));
+              mapInstanceRef.current.addControl(new window.ZDC.ScaleBar('bottom-left'));
             },
             () => {
               // 失敗時のコールバック
@@ -63,21 +65,17 @@ function App() {
         return;
       }
 
+      if (!window.ZDC) {
+        setError('地図APIの初期化に失敗しました');
+        return;
+      }
+
       // 住所検索
       const searchResult = await new Promise((resolve, reject) => {
-        if (!window.ZDC || !window.ZDC.Search) {
-          reject(new Error('住所検索機能の初期化に失敗しました'));
-          return;
-        }
-
         const search = new window.ZDC.Search();
         search.getLatLonByAddr({
           address: address,
           success: function(result) {
-            if (!result || !result.success) {
-              reject(new Error('住所が見つかりませんでした'));
-              return;
-            }
             resolve(result);
           },
           error: function(error) {
@@ -86,14 +84,18 @@ function App() {
         });
       });
 
+      if (!searchResult || !searchResult.status || searchResult.status.code !== '000') {
+        throw new Error('住所が見つかりませんでした');
+      }
+
       const newLocation = {
-        lat: searchResult.lat,
-        lng: searchResult.lon
+        lat: searchResult.latlon.lat,
+        lng: searchResult.latlon.lon
       };
       setLocation(newLocation);
 
       // 地図の更新
-      const latlon = new window.ZDC.LatLon(newLocation.lat, newLocation.lng);
+      const latlon = new window.ZDC.LatLng(newLocation.lat, newLocation.lng);
       mapInstanceRef.current.setCenter(latlon);
       mapInstanceRef.current.setZoom(16);
 

@@ -24,32 +24,6 @@ const handleApiError = (error, defaultMessage) => {
   return { statusCode, message };
 };
 
-// ジオコーディングエンドポイント
-app.post('/api/geocode', async (req, res) => {
-  try {
-    const { address } = req.body;
-    if (!address) {
-      return res.status(400).json({ error: '住所を入力してください' });
-    }
-
-    const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
-      params: {
-        address: address,
-        key: process.env.GOOGLE_MAPS_API_KEY
-      }
-    });
-
-    if (!response.data || !response.data.results || response.data.results.length === 0) {
-      return res.status(404).json({ error: '指定された住所が見つかりませんでした' });
-    }
-
-    res.json(response.data);
-  } catch (error) {
-    const { statusCode, message } = handleApiError(error, 'ジオコーディングに失敗しました');
-    res.status(statusCode).json({ error: message });
-  }
-});
-
 // 用途地域情報取得エンドポイント
 app.get('/api/landuse', async (req, res) => {
   try {
