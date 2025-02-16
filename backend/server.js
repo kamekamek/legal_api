@@ -90,10 +90,10 @@ app.get('/api/landuse', async (req, res) => {
     const properties = feature.properties;
 
     const regulationData = {
-      type: properties.youto || '情報なし',
-      fireArea: properties.bouka || '情報なし',
-      buildingCoverageRatio: properties.kenpei?.replace('%', '') || '60',
-      floorAreaRatio: properties.yoseki?.replace('%', '') || '200'
+      type: properties.youto?.toString() || '情報なし',
+      fireArea: properties.bouka?.toString() || '情報なし',
+      buildingCoverageRatio: (properties.kenpei?.toString() || '60').replace(/%/g, ''),
+      floorAreaRatio: (properties.yoseki?.toString() || '200').replace(/%/g, '')
     };
 
     res.json(regulationData);

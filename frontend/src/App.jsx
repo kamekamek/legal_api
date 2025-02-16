@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { TextField, IconButton, Container, Box, Typography, Paper } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import axios from 'axios'
+import { YOUTO_MAPPING, BOUKA_MAPPING, TOKEI_MAPPING } from './constants/zoneTypes';
 
 function App() {
   const [address, setAddress] = useState('')
@@ -243,8 +244,8 @@ function App() {
                   width: '100%'
                 }}>
                   <InfoRow label="所在地" value={address} />
-                  <InfoRow label="用途地域" value={landUseInfo?.type || '−'} />
-                  <InfoRow label="防火地域" value={landUseInfo?.fireArea || '−'} />
+                  <InfoRow label="用途地域" value={YOUTO_MAPPING[landUseInfo?.type] || '−'} />
+                  <InfoRow label="防火地域" value={BOUKA_MAPPING[landUseInfo?.fireArea] || '−'} />
                   <InfoRow label="建蔽率" value={landUseInfo?.buildingCoverageRatio ? `${landUseInfo.buildingCoverageRatio}%` : '−'} />
                   <InfoRow label="容積率" value={landUseInfo?.floorAreaRatio ? `${landUseInfo.floorAreaRatio}%` : '−'} />
                   <InfoRow label="建築基準法48条" value="準備中" />
