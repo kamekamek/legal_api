@@ -256,16 +256,27 @@ function App() {
                   <InfoRow label="用途地域" value={YOUTO_MAPPING[landUseInfo?.type] || '−'} />
                   <InfoRow label="防火地域" value={BOUKA_MAPPING[landUseInfo?.fireArea] || '−'} />
                   <InfoRow label="建蔽率" value={landUseInfo?.buildingCoverageRatio ? `${landUseInfo.buildingCoverageRatio}%` : '−'} />
+                  <InfoRow label="建蔽率（制限値）" value={landUseInfo?.buildingCoverageRatio2 ? `${landUseInfo.buildingCoverageRatio2}%` : '−'} />
                   <InfoRow label="容積率" value={landUseInfo?.floorAreaRatio ? `${landUseInfo.floorAreaRatio}%` : '−'} />
                   <InfoRow label="高度地区" value={landUseInfo?.heightDistrict ? (() => {
                     const height = parseHeightDistrict(landUseInfo.heightDistrict);
                     if (!height) return '−';
-                    const parts = [];
-                    if (height.maxHeight) parts.push(`最高高度: ${height.maxHeight}`);
-                    if (height.minHeight) parts.push(`最低高度: ${height.minHeight}`);
-                    if (height.maxHeightType) parts.push(height.maxHeightType);
-                    if (height.minHeightType) parts.push(height.minHeightType);
-                    return parts.join(' / ');
+                    return [
+                      height.maxHeight && `最高高度: ${height.maxHeight}`,
+                      height.minHeight && `最低高度: ${height.minHeight}`,
+                      height.maxHeightType && `最高高度規制: ${height.maxHeightType}`,
+                      height.minHeightType && `最低高度規制: ${height.minHeightType}`
+                    ].filter(Boolean).join(' / ');
+                  })() : '−'} />
+                  <InfoRow label="高度地区（制限値）" value={landUseInfo?.heightDistrict2 ? (() => {
+                    const height = parseHeightDistrict(landUseInfo.heightDistrict2);
+                    if (!height) return '−';
+                    return [
+                      height.maxHeight && `最高高度: ${height.maxHeight}`,
+                      height.minHeight && `最低高度: ${height.minHeight}`,
+                      height.maxHeightType && `最高高度規制: ${height.maxHeightType}`,
+                      height.minHeightType && `最低高度規制: ${height.minHeightType}`
+                    ].filter(Boolean).join(' / ');
                   })() : '−'} />
                   <InfoRow label="区域区分" value={landUseInfo?.zoneMap ? (() => {
                     const zone = parseZoneMap(landUseInfo.zoneMap);
