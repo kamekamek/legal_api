@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { TextField, IconButton, Container, Box, Typography, Paper } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import axios from 'axios'
-import { YOUTO_MAPPING, BOUKA_MAPPING, TOKEI_MAPPING, parseHeightDistrict, parseZoneMap } from './constants/zoneTypes';
+import { YOUTO_MAPPING, BOUKA_MAPPING, TOKEI_MAPPING, parseHeightDistrict, parseZoneMap, parseScenicDistrict, parseRatios, ZONE_DIVISION_MAPPING } from './constants/zoneTypes';
 
 function App() {
   const [address, setAddress] = useState('')
@@ -117,13 +117,14 @@ function App() {
         const landUseResponse = await axios.get('http://localhost:3001/api/landuse', {
           params: newLocation
         });
+        console.log('API Response:', landUseResponse.data);  
         setLandUseInfo(landUseResponse.data);
       } else {
         throw new Error('住所が見つかりませんでした');
       }
     } catch (error) {
-      setError('検索中にエラーが発生しました。' + (error.message || ''));
       console.error('Search error:', error);
+      setError('検索中にエラーが発生しました。' + (error.message || ''));
     }
   };
 
@@ -253,38 +254,31 @@ function App() {
                   width: '100%'
                 }}>
                   <InfoRow label="所在地" value={address} />
-                  <InfoRow label="用途地域" value={YOUTO_MAPPING[landUseInfo?.type] || '−'} />
-                  <InfoRow label="防火地域" value={BOUKA_MAPPING[landUseInfo?.fireArea] || '−'} />
+                  <InfoRow label="用途地域" value={landUseInfo?.type ? YOUTO_MAPPING[landUseInfo.type] || '−' : '−'} />
+                  <InfoRow label="防火地域" value={landUseInfo?.fireArea ? BOUKA_MAPPING[landUseInfo.fireArea] || '−' : '−'} />
                   <InfoRow label="建蔽率" value={landUseInfo?.buildingCoverageRatio ? `${landUseInfo.buildingCoverageRatio}%` : '−'} />
                   <InfoRow label="建蔽率（制限値）" value={landUseInfo?.buildingCoverageRatio2 ? `${landUseInfo.buildingCoverageRatio2}%` : '−'} />
                   <InfoRow label="容積率" value={landUseInfo?.floorAreaRatio ? `${landUseInfo.floorAreaRatio}%` : '−'} />
                   <InfoRow label="高度地区" value={landUseInfo?.heightDistrict ? (() => {
-                    const height = parseHeightDistrict(landUseInfo.heightDistrict);
-                    if (!height) return '−';
-                    return [
-                      height.maxHeight && `最高高度: ${height.maxHeight}`,
-                      height.minHeight && `最低高度: ${height.minHeight}`,
-                      height.maxHeightType && `最高高度規制: ${height.maxHeightType}`,
-                      height.minHeightType && `最低高度規制: ${height.minHeightType}`
-                    ].filter(Boolean).join(' / ');
+                    if (!landUseInfo.heightDistrict) return '−';
+                    return `最高高度: ${landUseInfo.heightDistrict}m`;
                   })() : '−'} />
                   <InfoRow label="高度地区（制限値）" value={landUseInfo?.heightDistrict2 ? (() => {
-                    const height = parseHeightDistrict(landUseInfo.heightDistrict2);
-                    if (!height) return '−';
-                    return [
-                      height.maxHeight && `最高高度: ${height.maxHeight}`,
-                      height.minHeight && `最低高度: ${height.minHeight}`,
-                      height.maxHeightType && `最高高度規制: ${height.maxHeightType}`,
-                      height.minHeightType && `最低高度規制: ${height.minHeightType}`
-                    ].filter(Boolean).join(' / ');
+                    if (!landUseInfo.heightDistrict2) return '−';
+                    return `最高高度: ${landUseInfo.heightDistrict2}m`;
                   })() : '−'} />
                   <InfoRow label="区域区分" value={landUseInfo?.zoneMap ? (() => {
-                    const zone = parseZoneMap(landUseInfo.zoneMap);
-                    return zone?.zoneDivision || '−';
+                    const parts = landUseInfo.zoneMap.split(':');
+                    return ZONE_DIVISION_MAPPING[parts[0]] || '−';
                   })() : '−'} />
-                  <InfoRow label="風致地区" value={landUseInfo?.scenicZoneName ? 
-                    `${landUseInfo.scenicZoneName}${landUseInfo.scenicZoneType ? ` (${landUseInfo.scenicZoneType})` : ''}` : 
-                    '−'} />
+                  <InfoRow label="風致地区" value={(() => {
+                    const scenic = parseScenicDistrict(landUseInfo?.f_meisho, landUseInfo?.f_shu);
+                    if (!scenic) return '−';
+                    return [
+                      scenic.name,
+                      scenic.type && `第${scenic.type}種`
+                    ].filter(Boolean).join(' ');
+                  })()} />
                   <InfoRow label="建築基準法48条" value="準備中" />
                   <InfoRow label="法別表第２" value="準備中" />
                 </Box>
@@ -300,22 +294,30 @@ function App() {
 function InfoRow({ label, value }) {
   return (
     <Box sx={{ 
-      display: 'flex',
-      borderBottom: '1px solid #eee',
-      py: 2,
-      width: '100%'
+      display: 'flex', 
+      borderBottom: '1px solid #eee', 
+      py: 1.5,
+      '&:last-child': {
+        borderBottom: 'none'
+      }
     }}>
-      <Typography sx={{ 
-        minWidth: 150,
-        color: 'text.secondary',
-        fontWeight: 500
-      }}>
+      <Typography 
+        component="div" 
+        sx={{ 
+          width: '35%', 
+          color: 'text.secondary',
+          fontWeight: 500
+        }}
+      >
         {label}
       </Typography>
-      <Typography sx={{ 
-        flex: 1,
-        pl: 2
-      }}>
+      <Typography 
+        component="div" 
+        sx={{ 
+          width: '65%',
+          whiteSpace: 'pre-line'
+        }}
+      >
         {value}
       </Typography>
     </Box>

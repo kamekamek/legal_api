@@ -90,3 +90,24 @@ export const parseZoneMap = (mapInfo) => {
     fireArea: FIRE_AREA_MAPPING[parts[4]] || null
   };
 };
+
+// 風致地区情報を解析する関数
+export const parseScenicDistrict = (fMeisho, fShu) => {
+  if (!fMeisho && !fShu) return null;
+  
+  return {
+    name: fMeisho || null,
+    type: fShu || null
+  };
+};
+
+// 建ぺい率と容積率の情報を解析する関数
+export const parseRatios = (map2) => {
+  if (!map2) return null;
+  
+  const parts = map2.split(':');
+  return {
+    buildingCoverageRatio: parts[2] ? `${parts[2]}%` : null,
+    floorAreaRatio: parts[3] ? `${parts[3]}%` : null
+  };
+};
