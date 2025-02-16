@@ -73,7 +73,9 @@ app.get('/api/landuse', async (req, res) => {
     const response = await axios.get(`${ZENRIN_WMS_URL}`, {
       params: wmsParams,
       headers: {
-        'x-api-key': ZENRIN_API_KEY
+        'x-api-key': ZENRIN_API_KEY,
+        'Authorization': 'referer',
+        'Referer': req.headers.referer || ''
       }
     });
 
