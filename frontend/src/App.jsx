@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { TextField, Button, Container, Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material'
+import { TextField, IconButton, Container, Box, Typography, Paper } from '@mui/material'
+import SearchIcon from '@mui/icons-material/Search'
 import axios from 'axios'
 import 'leaflet/dist/leaflet.css'
 import { MapContainer, TileLayer, Marker } from 'react-leaflet'
@@ -40,104 +41,133 @@ function App() {
   }
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
-          住所検索
-        </Typography>
-        <Typography variant="subtitle1" gutterBottom align="center" color="text.secondary">
-          住所を入力して地図と用途地域情報を確認できます
-        </Typography>
-        
-        <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
-          <TextField
-            fullWidth
-            label="住所を入力"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            sx={{ mr: 1 }}
-          />
-          <Button
-            variant="contained"
-            onClick={handleSearch}
-            sx={{ minWidth: '120px' }}
-          >
-            検索
-          </Button>
+    <Box sx={{ 
+      bgcolor: '#F5F5F5', 
+      minHeight: '100vh',
+      py: 4
+    }}>
+      <Container maxWidth="lg">
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
+            住所検索
+          </Typography>
+          <Typography variant="subtitle1" align="center" color="text.secondary" sx={{ mb: 3 }}>
+            住所を入力して地図と用途地域情報を確認できます
+          </Typography>
+          
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            maxWidth: 600,
+            mx: 'auto',
+            bgcolor: 'white',
+            borderRadius: 2,
+            overflow: 'hidden',
+            boxShadow: 1
+          }}>
+            <TextField
+              fullWidth
+              placeholder="住所を入力"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': { border: 'none' },
+                },
+                '& .MuiInputBase-input': {
+                  p: 2,
+                }
+              }}
+            />
+            <IconButton 
+              onClick={handleSearch}
+              sx={{ 
+                bgcolor: '#1a237e',
+                borderRadius: 1,
+                color: 'white',
+                m: 1,
+                '&:hover': {
+                  bgcolor: '#000051'
+                }
+              }}
+            >
+              <SearchIcon />
+            </IconButton>
+          </Box>
         </Box>
 
         {error && (
-          <Typography color="error" sx={{ mb: 2 }}>
+          <Typography color="error" align="center" sx={{ mb: 2 }}>
             {error}
           </Typography>
         )}
 
-        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
-          {location && (
-            <Paper sx={{ p: 2, flex: 1 }}>
-              <Typography variant="h6" gutterBottom>
-                地図
-              </Typography>
-              <Box sx={{ height: '300px' }}>
-                <MapContainer
-                  center={[location.lat, location.lng]}
-                  zoom={16}
-                  style={{ height: '100%', width: '100%' }}
-                >
-                  <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  />
-                  <Marker position={[location.lat, location.lng]} />
-                </MapContainer>
-              </Box>
-            </Paper>
-          )}
+        {location && (
+          <Paper 
+            elevation={3}
+            sx={{ 
+              borderRadius: 4,
+              overflow: 'hidden',
+              bgcolor: 'white'
+            }}
+          >
+            <Box sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {/* 地図 */}
+                <Box sx={{ flex: '1 1 400px', minHeight: 300 }}>
+                  <MapContainer
+                    center={[location.lat, location.lng]}
+                    zoom={16}
+                    style={{ height: '100%', width: '100%', minHeight: 300 }}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    />
+                    <Marker position={[location.lat, location.lng]} />
+                  </MapContainer>
+                </Box>
 
-          {location && (
-            <Paper sx={{ p: 2, flex: 1 }}>
-              <Typography variant="h6" gutterBottom>
-                法規制情報
-              </Typography>
-              <TableContainer>
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell component="th">所在地</TableCell>
-                      <TableCell>{address}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th">用途地域</TableCell>
-                      <TableCell>{landUseInfo?.type || '第一種住居地域'}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th">防火地域</TableCell>
-                      <TableCell>{landUseInfo?.fireArea || '準防火地域'}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th">建蔽率</TableCell>
-                      <TableCell>{landUseInfo?.buildingCoverageRatio || '60'}%</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th">容積率</TableCell>
-                      <TableCell>{landUseInfo?.floorAreaRatio || '200'}%</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th">建築基準法48条</TableCell>
-                      <TableCell>準備中</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th">法別表第２</TableCell>
-                      <TableCell>準備中</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          )}
-        </Box>
+                {/* 法規制情報 */}
+                <Box sx={{ flex: '1 1 400px' }}>
+                  <Box sx={{ display: 'grid', gap: 2 }}>
+                    <InfoRow label="所在地" value={address} />
+                    <InfoRow label="用途地域" value={landUseInfo?.type || '第一種住居地域'} />
+                    <InfoRow label="防火地域" value={landUseInfo?.fireArea || '準防火地域'} />
+                    <InfoRow label="建蔽率" value={`${landUseInfo?.buildingCoverageRatio || '60'}%`} />
+                    <InfoRow label="容積率" value={`${landUseInfo?.floorAreaRatio || '200'}%`} />
+                    <InfoRow label="建築基準法48条" value="準備中" />
+                    <InfoRow label="法別表第２" value="準備中" />
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          </Paper>
+        )}
       </Box>
-    </Container>
+    </Box>
+  )
+}
+
+// 情報行のコンポーネント
+function InfoRow({ label, value }) {
+  return (
+    <Box sx={{ 
+      display: 'flex',
+      borderBottom: '1px solid #eee',
+      py: 2
+    }}>
+      <Typography sx={{ 
+        width: 120,
+        color: 'text.secondary',
+        fontWeight: 500
+      }}>
+        {label}
+      </Typography>
+      <Typography sx={{ flex: 1 }}>
+        {value}
+      </Typography>
+    </Box>
   )
 }
 
