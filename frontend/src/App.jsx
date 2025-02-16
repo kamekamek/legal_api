@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { TextField, IconButton, Container, Box, Typography, Paper } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import axios from 'axios'
-import { YOUTO_MAPPING, BOUKA_MAPPING, TOKEI_MAPPING } from './constants/zoneTypes';
+import { YOUTO_MAPPING, BOUKA_MAPPING, TOKEI_MAPPING, parseHeightDistrict, parseZoneMap } from './constants/zoneTypes';
 
 function App() {
   const [address, setAddress] = useState('')
@@ -257,6 +257,23 @@ function App() {
                   <InfoRow label="防火地域" value={BOUKA_MAPPING[landUseInfo?.fireArea] || '−'} />
                   <InfoRow label="建蔽率" value={landUseInfo?.buildingCoverageRatio ? `${landUseInfo.buildingCoverageRatio}%` : '−'} />
                   <InfoRow label="容積率" value={landUseInfo?.floorAreaRatio ? `${landUseInfo.floorAreaRatio}%` : '−'} />
+                  <InfoRow label="高度地区" value={landUseInfo?.heightDistrict ? (() => {
+                    const height = parseHeightDistrict(landUseInfo.heightDistrict);
+                    if (!height) return '−';
+                    const parts = [];
+                    if (height.maxHeight) parts.push(`最高高度: ${height.maxHeight}`);
+                    if (height.minHeight) parts.push(`最低高度: ${height.minHeight}`);
+                    if (height.maxHeightType) parts.push(height.maxHeightType);
+                    if (height.minHeightType) parts.push(height.minHeightType);
+                    return parts.join(' / ');
+                  })() : '−'} />
+                  <InfoRow label="区域区分" value={landUseInfo?.zoneMap ? (() => {
+                    const zone = parseZoneMap(landUseInfo.zoneMap);
+                    return zone?.zoneDivision || '−';
+                  })() : '−'} />
+                  <InfoRow label="風致地区" value={landUseInfo?.scenicZoneName ? 
+                    `${landUseInfo.scenicZoneName}${landUseInfo.scenicZoneType ? ` (${landUseInfo.scenicZoneType})` : ''}` : 
+                    '−'} />
                   <InfoRow label="建築基準法48条" value="準備中" />
                   <InfoRow label="法別表第２" value="準備中" />
                 </Box>
