@@ -295,6 +295,8 @@ function App() {
                   })()} />
                   <InfoRow label="建築基準法48条" value="準備中" />
                   <InfoRow label="法別表第２" value="準備中" />
+                  <InfoRow label="告示文" value="準備中" />
+                  <InfoRow label="東京都建築安全条例" value="準備中" />
                 </Box>
               </Box>
             </Box>
