@@ -137,10 +137,16 @@ app.get('/api/kokuji/:kokuji_id', async (req, res) => {
         }
       }
     );
+
+    // <Law>タグを削除（前後の空白も含めて削除）
+    let kokujiText = response.data;
+    kokujiText = kokujiText.replace(/^\s*<Law>\s*/g, '');  // 先頭の<Law>を削除
+    kokujiText = kokujiText.replace(/\s*<\/Law>\s*$/g, ''); // 末尾の</Law>を削除
+
     res.json({
       status: 'success',
       data: {
-        kokuji_text: response.data,
+        kokuji_text: kokujiText,
         kokuji_id,
         updated_at: new Date().toISOString()
       }

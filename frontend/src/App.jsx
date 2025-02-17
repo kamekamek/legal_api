@@ -634,7 +634,8 @@ function App() {
               bgcolor: 'white',
               width: '100%',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              maxWidth: '100%'  // 最大幅を100%に設定
             }}
           >
             <Box sx={{ 
@@ -649,7 +650,7 @@ function App() {
               }}>
                 {/* 法規制情報 */}
                 <Box sx={{ 
-                  flex: '1 1 400px',
+                  flex: '1 1 100%',  // 幅を100%に変更
                   maxWidth: '100%'
                 }}>
                   <Box sx={{ 
@@ -701,9 +702,13 @@ function App() {
 }
 
 function InfoRow({ label, value }) {
+  // 告示文の場合は特別なスタイルを適用
+  const isKokuji = label === '告示文';
+  
   return (
     <Box sx={{ 
       display: 'flex', 
+      flexDirection: { xs: 'column', sm: isKokuji ? 'column' : 'row' },  // 告示文の場合は常に縦並び
       borderBottom: '1px solid #eee', 
       py: 1.5,
       '&:last-child': {
@@ -713,9 +718,10 @@ function InfoRow({ label, value }) {
       <Typography 
         component="div" 
         sx={{ 
-          width: '35%', 
+          width: { xs: '100%', sm: isKokuji ? '100%' : '25%' },  // 告示文の場合はラベルも100%幅
           color: 'text.secondary',
-          fontWeight: 500
+          fontWeight: 500,
+          mb: { xs: 1, sm: isKokuji ? 1 : 0 }  // 告示文の場合は常に下マージンを付ける
         }}
       >
         {label}
@@ -723,8 +729,14 @@ function InfoRow({ label, value }) {
       <Typography 
         component="div" 
         sx={{ 
-          width: '65%',
-          whiteSpace: 'pre-line'
+          width: { xs: '100%', sm: isKokuji ? '100%' : '75%' },  // 告示文の場合は値も100%幅
+          whiteSpace: 'pre-line',
+          lineHeight: isKokuji ? 1.8 : 1.5,  // 告示文の場合は行間を広げる
+          fontSize: isKokuji ? '0.95rem' : 'inherit',  // 告示文の場合はフォントサイズを少し小さく
+          letterSpacing: isKokuji ? '0.03em' : 'inherit',  // 告示文の場合は文字間隔を広げる
+          '& > p': {
+            marginBottom: isKokuji ? '1em' : 0  // 告示文の段落間の余白を追加
+          }
         }}
       >
         {value}
