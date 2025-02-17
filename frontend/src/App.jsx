@@ -412,6 +412,88 @@ function App() {
                 height: '100%'
               }}
             />
+            {/* 全画面表示時のコントロールパネル */}
+            {isFullscreen && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 16,
+                  left: 80,
+                  zIndex: 2,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  maxWidth: '400px',
+                  width: 'calc(100% - 160px)'
+                }}
+              >
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  width: '100%',
+                  bgcolor: 'white',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  boxShadow: 1
+                }}>
+                  <TextField
+                    fullWidth
+                    placeholder="住所を入力（例：東京都千代田区丸の内1丁目）"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    sx={{ 
+                      '& .MuiOutlinedInput-root': {
+                        '& fieldset': { border: 'none' },
+                      },
+                      '& .MuiInputBase-input': {
+                        p: 2,
+                        bgcolor: 'white'
+                      }
+                    }}
+                  />
+                  <IconButton 
+                    onClick={handleSearch}
+                    sx={{ 
+                      bgcolor: '#1a237e',
+                      borderRadius: 1,
+                      color: 'white',
+                      m: 1,
+                      '&:hover': {
+                        bgcolor: '#000051'
+                      }
+                    }}
+                  >
+                    <SearchIcon />
+                  </IconButton>
+                </Box>
+
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  width: '100%',
+                  bgcolor: 'white',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  boxShadow: 1,
+                  p: 1
+                }}>
+                  <div className="form-check form-switch form-switch-custom py-1">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="youtoSwitch"
+                      checked={youtoVisible}
+                      onChange={(e) => setYoutoVisible(e.target.checked)}
+                      disabled={currentZoom < 15}
+                    />
+                    <label className="form-check-label" htmlFor="youtoSwitch">
+                      用途地域 {currentZoom < 15 && '(ズームインしてください)'}
+                    </label>
+                  </div>
+                </Box>
+              </Box>
+            )}
+
             <IconButton
               onClick={toggleFullscreen}
               sx={{
@@ -430,76 +512,76 @@ function App() {
           </Box>
 
           {!isFullscreen && (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              width: '100%',
-              maxWidth: 600,
-              mx: 'auto',
-              bgcolor: 'white',
-              borderRadius: 2,
-              overflow: 'hidden',
-              boxShadow: 1,
-              mb: 4
-            }}>
-              <TextField
-                fullWidth
-                placeholder="住所を入力（例：東京都千代田区丸の内1丁目）"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { border: 'none' },
-                  },
-                  '& .MuiInputBase-input': {
-                    p: 2,
-                  }
-                }}
-              />
-              <IconButton 
-                onClick={handleSearch}
-                sx={{ 
-                  bgcolor: '#1a237e',
-                  borderRadius: 1,
-                  color: 'white',
-                  m: 1,
-                  '&:hover': {
-                    bgcolor: '#000051'
-                  }
-                }}
-              >
-                <SearchIcon />
-              </IconButton>
-            </Box>
-          )}
-
-          {!isFullscreen && (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              width: '100%',
-              maxWidth: 600,
-              mx: 'auto',
-              bgcolor: 'white',
-              borderRadius: 2,
-              overflow: 'hidden',
-              boxShadow: 1,
-              mb: 4
-            }}>
-              <div className="form-check form-switch form-switch-custom py-1">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="youtoSwitch"
-                  checked={youtoVisible}
-                  onChange={(e) => setYoutoVisible(e.target.checked)}
-                  disabled={currentZoom < 15}
+            <>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center',
+                width: '100%',
+                maxWidth: 600,
+                mx: 'auto',
+                bgcolor: 'white',
+                borderRadius: 2,
+                overflow: 'hidden',
+                boxShadow: 1,
+                mb: 4
+              }}>
+                <TextField
+                  fullWidth
+                  placeholder="住所を入力（例：東京都千代田区丸の内1丁目）"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': { border: 'none' },
+                    },
+                    '& .MuiInputBase-input': {
+                      p: 2,
+                    }
+                  }}
                 />
-                <label className="form-check-label" htmlFor="youtoSwitch">
-                  用途地域 {currentZoom < 15 && '(ズームインしてください)'}
-                </label>
-              </div>
-            </Box>
+                <IconButton 
+                  onClick={handleSearch}
+                  sx={{ 
+                    bgcolor: '#1a237e',
+                    borderRadius: 1,
+                    color: 'white',
+                    m: 1,
+                    '&:hover': {
+                      bgcolor: '#000051'
+                    }
+                  }}
+                >
+                  <SearchIcon />
+                </IconButton>
+              </Box>
+
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center',
+                width: '100%',
+                maxWidth: 600,
+                mx: 'auto',
+                bgcolor: 'white',
+                borderRadius: 2,
+                overflow: 'hidden',
+                boxShadow: 1,
+                mb: 4
+              }}>
+                <div className="form-check form-switch form-switch-custom py-1">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="youtoSwitch"
+                    checked={youtoVisible}
+                    onChange={(e) => setYoutoVisible(e.target.checked)}
+                    disabled={currentZoom < 15}
+                  />
+                  <label className="form-check-label" htmlFor="youtoSwitch">
+                    用途地域 {currentZoom < 15 && '(ズームインしてください)'}
+                  </label>
+                </div>
+              </Box>
+            </>
           )}
 
           {error && (
