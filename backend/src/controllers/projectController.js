@@ -2,17 +2,21 @@
 
 const { Project } = require('../models');
 const { ValidationError, DatabaseError } = require('sequelize');
+const supabase = require('../config/supabase');
 
 // プロジェクト一覧の取得
 exports.getProjects = async (req, res, next) => {
   try {
-    const where = {};
+    let query = supabase.from('projects').select('*');
+    
     if (req.query.status) {
-      where.status = req.query.status;
+      query = query.eq('status', req.query.status);
     }
-
-    const projects = await Project.findAll({ where });
-    res.json({ projects });
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    res.json({ projects: data });
   } catch (error) {
     next(error);
   }
@@ -21,11 +25,18 @@ exports.getProjects = async (req, res, next) => {
 // プロジェクト詳細の取得
 exports.getProject = async (req, res, next) => {
   try {
-    const project = await Project.findByPk(req.params.id);
-    if (!project) {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+    
+    if (error) throw error;
+    if (!data) {
       return res.status(404).json({ error: 'プロジェクトが見つかりません' });
     }
-    res.json(project);
+    
+    res.json(data);
   } catch (error) {
     next(error);
   }
@@ -34,12 +45,21 @@ exports.getProject = async (req, res, next) => {
 // プロジェクトの作成
 exports.createProject = async (req, res, next) => {
   try {
-    const project = await Project.create(req.body);
-    res.status(201).json(project);
-  } catch (error) {
-    if (error instanceof ValidationError) {
-      return res.status(400).json({ error: error.message });
+    const { data, error } = await supabase
+      .from('projects')
+      .insert([req.body])
+      .select()
+      .single();
+    
+    if (error) {
+      if (error.code === '23505') { // ユニーク制約違反
+        return res.status(400).json({ error: 'プロジェクト名が既に使用されています' });
+      }
+      throw error;
     }
+    
+    res.status(201).json(data);
+  } catch (error) {
     next(error);
   }
 };
@@ -47,21 +67,20 @@ exports.createProject = async (req, res, next) => {
 // プロジェクトの更新
 exports.updateProject = async (req, res, next) => {
   try {
-    const [updated] = await Project.update(req.body, {
-      where: { id: req.params.id },
-      returning: true
-    });
-
-    if (!updated) {
+    const { data, error } = await supabase
+      .from('projects')
+      .update(req.body)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    if (!data) {
       return res.status(404).json({ error: 'プロジェクトが見つかりません' });
     }
-
-    const project = await Project.findByPk(req.params.id);
-    res.json(project);
+    
+    res.json(data);
   } catch (error) {
-    if (error instanceof ValidationError) {
-      return res.status(400).json({ error: error.message });
-    }
     next(error);
   }
 };
@@ -69,14 +88,12 @@ exports.updateProject = async (req, res, next) => {
 // プロジェクトの削除
 exports.deleteProject = async (req, res, next) => {
   try {
-    const deleted = await Project.destroy({
-      where: { id: req.params.id }
-    });
-
-    if (!deleted) {
-      return res.status(404).json({ error: 'プロジェクトが見つかりません' });
-    }
-
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', req.params.id);
+    
+    if (error) throw error;
     res.status(204).send();
   } catch (error) {
     next(error);

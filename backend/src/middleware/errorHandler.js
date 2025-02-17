@@ -1,37 +1,38 @@
 'use strict';
 
-const { ValidationError, DatabaseError } = require('sequelize');
-
 module.exports = (err, req, res, next) => {
   console.error(err);
 
-  if (err instanceof ValidationError) {
-    return res.status(400).json({
-      error: err.message
-    });
-  }
-
-  if (err instanceof DatabaseError) {
-    return res.status(500).json({
-      error: 'データベースエラーが発生しました'
-    });
+  // Supabaseのエラーハンドリング
+  if (err.code) {
+    switch (err.code) {
+      case '23505': // ユニーク制約違反
+        return res.status(400).json({
+          error: 'この名前は既に使用されています'
+        });
+      case '23503': // 外部キー制約違反
+        return res.status(400).json({
+          error: '関連するリソースが見つかりません'
+        });
+      case '23502': // Not null制約違反
+        return res.status(400).json({
+          error: '必須フィールドが入力されていません'
+        });
+      case '42703': // カラムが存在しない
+        return res.status(400).json({
+          error: '無効なフィールドが指定されています'
+        });
+    }
   }
 
   if (err.type === 'entity.parse.failed') {
     return res.status(400).json({
-      error: 'Invalid JSON'
-    });
-  }
-
-  // 同時実行制御エラー
-  if (err.name === 'SequelizeOptimisticLockError') {
-    return res.status(409).json({
-      error: '他のユーザーによって更新されました'
+      error: '無効なJSONフォーマットです'
     });
   }
 
   // その他のエラー
   res.status(500).json({
-    error: 'Internal Server Error'
+    error: '内部サーバーエラーが発生しました'
   });
 }; 
