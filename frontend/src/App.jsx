@@ -45,7 +45,7 @@ function App() {
             () => {
               // Success callback
               console.log('Map initialized successfully');
-              mapInstanceRef.current.addControl(new window.ZDC.ZoomButton('bottom-right'));
+              mapInstanceRef.current.addControl(new window.ZDC.ZoomButton('top-left'));
               mapInstanceRef.current.addControl(new window.ZDC.Compass('top-right'));
               mapInstanceRef.current.addControl(new window.ZDC.ScaleBar('bottom-left'));
             },
