@@ -183,11 +183,44 @@ function App() {
     };
 
     map.addEventListener('idle', redrawLayer);
-    map.addEventListener('click', getFeatureInfo);
+    map.addEventListener('click', async (e) => {
+      try {
+        // 既存のマーカーがある場合は削除（他のウィジェットは保持）
+        if (markerRef.current) {
+          map.removeWidget(markerRef.current);
+        }
+
+        // クリックされた座標を取得（ZDCマップの形式に合わせて修正）
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        // 新しいマーカーを作成
+        markerRef.current = new window.ZDC.Marker(new window.ZDC.LatLng(lat, lng));
+        map.addWidget(markerRef.current);
+
+        // 用途地域情報の取得
+        const landUseResponse = await axios.get('http://localhost:3001/api/landuse', {
+          params: {
+            lat: lat,
+            lng: lng
+          }
+        });
+
+        setLandUseInfo(landUseResponse.data);
+        
+        // オーバーレイを再描画
+        if (youtoVisible) {
+          setYouto();
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+        setError('検索中にエラーが発生しました。' + (error.message || ''));
+      }
+    });
 
     return () => {
       map.removeEventListener('idle', redrawLayer);
-      map.removeEventListener('click', getFeatureInfo);
+      map.removeEventListener('click');
     };
   }, [youtoVisible]);
 
