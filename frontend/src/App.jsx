@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { TextField, IconButton, Container, Box, Typography, Paper } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
+import FullscreenIcon from '@mui/icons-material/Fullscreen'
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
 import axios from 'axios'
 import { YOUTO_MAPPING, BOUKA_MAPPING, TOKEI_MAPPING, parseHeightDistrict, parseZoneMap, parseScenicDistrict, parseRatios, ZONE_DIVISION_MAPPING } from './constants/zoneTypes';
 
@@ -9,6 +11,7 @@ function App() {
   const [location, setLocation] = useState(null)
   const [landUseInfo, setLandUseInfo] = useState(null)
   const [error, setError] = useState('')
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
   const markerRef = useRef(null)
@@ -324,6 +327,24 @@ function App() {
     }
   };
 
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+    if (mapInstanceRef.current) {
+      // 地図のサイズを再計算
+      setTimeout(() => {
+        const map = mapInstanceRef.current;
+        const container = mapRef.current;
+        if (container) {
+          // コンテナのスタイルを更新
+          container.style.width = '100%';
+          container.style.height = '100%';
+          // 地図を更新
+          map.refreshSize();
+        }
+      }, 100);
+    }
+  };
+
   return (
     <Box sx={{ 
       bgcolor: 'white',
@@ -338,181 +359,224 @@ function App() {
           flexDirection: 'column',
           alignItems: 'center',
           width: '100%',
-          maxWidth: '800px !important',
-          p: 2
+          maxWidth: isFullscreen ? '100% !important' : '800px !important',
+          p: isFullscreen ? 0 : 2
         }}
       >
-        <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
-          用途地域検索
-        </Typography>
-        <Typography variant="subtitle1" align="center" color="text.secondary" sx={{ mb: 3 }}>
-          住所を入力して地図と用途地域情報を確認できます
-        </Typography>
-
         <Box sx={{ 
+          display: 'flex',
+          flexDirection: 'column',
           width: '100%',
-          position: 'relative',
-          paddingTop: '56.25%', // 16:9のアスペクト比
-          mb: 4,
-          borderRadius: 2,
-          overflow: 'hidden',
-          boxShadow: 1
+          ...(isFullscreen ? {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1000,
+            bgcolor: 'white'
+          } : {})
         }}>
-          <Box
-            ref={mapRef}
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%'
-            }}
-          />
-        </Box>
+          {!isFullscreen && (
+            <>
+              <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
+                用途地域検索
+              </Typography>
+              <Typography variant="subtitle1" align="center" color="text.secondary" sx={{ mb: 3 }}>
+                住所を入力して地図と用途地域情報を確認できます
+              </Typography>
+            </>
+          )}
 
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          width: '100%',
-          maxWidth: 600,
-          mx: 'auto',
-          bgcolor: 'white',
-          borderRadius: 2,
-          overflow: 'hidden',
-          boxShadow: 1,
-          mb: 4
-        }}>
-          <TextField
-            fullWidth
-            placeholder="住所を入力（例：東京都千代田区丸の内1丁目）"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            sx={{ 
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': { border: 'none' },
-              },
-              '& .MuiInputBase-input': {
-                p: 2,
-              }
-            }}
-          />
-          <IconButton 
-            onClick={handleSearch}
-            sx={{ 
-              bgcolor: '#1a237e',
-              borderRadius: 1,
-              color: 'white',
-              m: 1,
-              '&:hover': {
-                bgcolor: '#000051'
-              }
-            }}
-          >
-            <SearchIcon />
-          </IconButton>
-        </Box>
-
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          width: '100%',
-          maxWidth: 600,
-          mx: 'auto',
-          bgcolor: 'white',
-          borderRadius: 2,
-          overflow: 'hidden',
-          boxShadow: 1,
-          mb: 4
-        }}>
-          <div className="form-check form-switch form-switch-custom py-1">
-            <input
-              className="form-check-input"
-              type="checkbox"
-              id="youtoSwitch"
-              checked={youtoVisible}
-              onChange={(e) => setYoutoVisible(e.target.checked)}
-              disabled={currentZoom < 15}
-            />
-            <label className="form-check-label" htmlFor="youtoSwitch">
-              用途地域 {currentZoom < 15 && '(ズームインしてください)'}
-            </label>
-          </div>
-        </Box>
-
-        {error && (
-          <Typography color="error" align="center" sx={{ mb: 2 }}>
-            {error}
-          </Typography>
-        )}
-
-        <Paper 
-          elevation={3}
-          sx={{ 
-            borderRadius: 4,
-            overflow: 'hidden',
-            bgcolor: 'white',
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column'
-          }}
-        >
           <Box sx={{ 
-            p: 3,
-            width: '100%'
+            width: '100%',
+            position: 'relative',
+            paddingTop: isFullscreen ? '100vh' : '56.25%', // フルスクリーン時は100vh、通常時は16:9
+            ...(isFullscreen ? {
+              height: '100vh',
+              paddingTop: 0
+            } : {
+              mb: 4,
+              borderRadius: 2,
+              overflow: 'hidden',
+              boxShadow: 1
+            })
           }}>
+            <Box
+              ref={mapRef}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%'
+              }}
+            />
+            <IconButton
+              onClick={toggleFullscreen}
+              sx={{
+                position: 'absolute',
+                top: 16,
+                right: 60,
+                bgcolor: 'white',
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.8)'
+                },
+                zIndex: 1
+              }}
+            >
+              {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+            </IconButton>
+          </Box>
+
+          {!isFullscreen && (
             <Box sx={{ 
               display: 'flex', 
-              gap: 4, 
-              flexWrap: 'wrap',
-              justifyContent: 'center'
+              alignItems: 'center',
+              width: '100%',
+              maxWidth: 600,
+              mx: 'auto',
+              bgcolor: 'white',
+              borderRadius: 2,
+              overflow: 'hidden',
+              boxShadow: 1,
+              mb: 4
             }}>
-              {/* 法規制情報 */}
+              <TextField
+                fullWidth
+                placeholder="住所を入力（例：東京都千代田区丸の内1丁目）"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                sx={{ 
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { border: 'none' },
+                  },
+                  '& .MuiInputBase-input': {
+                    p: 2,
+                  }
+                }}
+              />
+              <IconButton 
+                onClick={handleSearch}
+                sx={{ 
+                  bgcolor: '#1a237e',
+                  borderRadius: 1,
+                  color: 'white',
+                  m: 1,
+                  '&:hover': {
+                    bgcolor: '#000051'
+                  }
+                }}
+              >
+                <SearchIcon />
+              </IconButton>
+            </Box>
+          )}
+
+          {!isFullscreen && (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              width: '100%',
+              maxWidth: 600,
+              mx: 'auto',
+              bgcolor: 'white',
+              borderRadius: 2,
+              overflow: 'hidden',
+              boxShadow: 1,
+              mb: 4
+            }}>
+              <div className="form-check form-switch form-switch-custom py-1">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="youtoSwitch"
+                  checked={youtoVisible}
+                  onChange={(e) => setYoutoVisible(e.target.checked)}
+                  disabled={currentZoom < 15}
+                />
+                <label className="form-check-label" htmlFor="youtoSwitch">
+                  用途地域 {currentZoom < 15 && '(ズームインしてください)'}
+                </label>
+              </div>
+            </Box>
+          )}
+
+          {error && (
+            <Typography color="error" align="center" sx={{ mb: 2 }}>
+              {error}
+            </Typography>
+          )}
+
+          <Paper 
+            elevation={3}
+            sx={{ 
+              borderRadius: 4,
+              overflow: 'hidden',
+              bgcolor: 'white',
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <Box sx={{ 
+              p: 3,
+              width: '100%'
+            }}>
               <Box sx={{ 
-                flex: '1 1 400px',
-                maxWidth: '100%'
+                display: 'flex', 
+                gap: 4, 
+                flexWrap: 'wrap',
+                justifyContent: 'center'
               }}>
+                {/* 法規制情報 */}
                 <Box sx={{ 
-                  display: 'grid', 
-                  gap: 2,
-                  width: '100%'
+                  flex: '1 1 400px',
+                  maxWidth: '100%'
                 }}>
-                  <InfoRow label="所在地" value={address} />
-                  <InfoRow label="用途地域" value={landUseInfo?.type ? YOUTO_MAPPING[landUseInfo.type] || '−' : '−'} />
-                  <InfoRow label="防火地域" value={landUseInfo?.fireArea ? BOUKA_MAPPING[landUseInfo.fireArea] || '−' : '−'} />
-                  <InfoRow label="建蔽率" value={landUseInfo?.buildingCoverageRatio ? `${landUseInfo.buildingCoverageRatio}%` : '−'} />
-                  <InfoRow label="建蔽率（制限値）" value={landUseInfo?.buildingCoverageRatio2 ? `${landUseInfo.buildingCoverageRatio2}%` : '−'} />
-                  <InfoRow label="容積率" value={landUseInfo?.floorAreaRatio ? `${landUseInfo.floorAreaRatio}%` : '−'} />
-                  <InfoRow label="高度地区" value={landUseInfo?.heightDistrict ? (() => {
-                    const height = parseHeightDistrict(landUseInfo.heightDistrict);
-                    if (!height) return '−';
-                    return height.join('\n');
-                  })() : '−'} />
-                  <InfoRow label="高度地区（制限値）" value={landUseInfo?.heightDistrict2 ? (() => {
-                    const height = parseHeightDistrict(landUseInfo.heightDistrict2);
-                    if (!height) return '−';
-                    return height.join('\n');
-                  })() : '−'} />
-                  <InfoRow label="区域区分" value={landUseInfo?.zoneMap ? (() => {
-                    const parts = landUseInfo.zoneMap.split(':');
-                    return ZONE_DIVISION_MAPPING[parts[0]] || '−';
-                  })() : '−'} />
-                  <InfoRow label="風致地区" value={(() => {
-                    const scenic = parseScenicDistrict(landUseInfo?.f_meisho, landUseInfo?.f_shu);
-                    if (!scenic) return '−';
-                    return [
-                      scenic.name,
-                      scenic.type && `第${scenic.type}種`
-                    ].filter(Boolean).join(' ');
-                  })()} />
-                  <InfoRow label="建築基準法48条" value="準備中" />
-                  <InfoRow label="法別表第２" value="準備中" />
-                  <InfoRow label="告示文" value="準備中" />
-                  <InfoRow label="東京都建築安全条例" value="準備中" />
+                  <Box sx={{ 
+                    display: 'grid', 
+                    gap: 2,
+                    width: '100%'
+                  }}>
+                    <InfoRow label="所在地" value={address} />
+                    <InfoRow label="用途地域" value={landUseInfo?.type ? YOUTO_MAPPING[landUseInfo.type] || '−' : '−'} />
+                    <InfoRow label="防火地域" value={landUseInfo?.fireArea ? BOUKA_MAPPING[landUseInfo.fireArea] || '−' : '−'} />
+                    <InfoRow label="建蔽率" value={landUseInfo?.buildingCoverageRatio ? `${landUseInfo.buildingCoverageRatio}%` : '−'} />
+                    <InfoRow label="建蔽率（制限値）" value={landUseInfo?.buildingCoverageRatio2 ? `${landUseInfo.buildingCoverageRatio2}%` : '−'} />
+                    <InfoRow label="容積率" value={landUseInfo?.floorAreaRatio ? `${landUseInfo.floorAreaRatio}%` : '−'} />
+                    <InfoRow label="高度地区" value={landUseInfo?.heightDistrict ? (() => {
+                      const height = parseHeightDistrict(landUseInfo.heightDistrict);
+                      if (!height) return '−';
+                      return height.join('\n');
+                    })() : '−'} />
+                    <InfoRow label="高度地区（制限値）" value={landUseInfo?.heightDistrict2 ? (() => {
+                      const height = parseHeightDistrict(landUseInfo.heightDistrict2);
+                      if (!height) return '−';
+                      return height.join('\n');
+                    })() : '−'} />
+                    <InfoRow label="区域区分" value={landUseInfo?.zoneMap ? (() => {
+                      const parts = landUseInfo.zoneMap.split(':');
+                      return ZONE_DIVISION_MAPPING[parts[0]] || '−';
+                    })() : '−'} />
+                    <InfoRow label="風致地区" value={(() => {
+                      const scenic = parseScenicDistrict(landUseInfo?.f_meisho, landUseInfo?.f_shu);
+                      if (!scenic) return '−';
+                      return [
+                        scenic.name,
+                        scenic.type && `第${scenic.type}種`
+                      ].filter(Boolean).join(' ');
+                    })()} />
+                    <InfoRow label="建築基準法48条" value="準備中" />
+                    <InfoRow label="法別表第２" value="準備中" />
+                    <InfoRow label="告示文" value="準備中" />
+                    <InfoRow label="東京都建築安全条例" value="準備中" />
+                  </Box>
                 </Box>
               </Box>
             </Box>
-          </Box>
-        </Paper>
+          </Paper>
+        </Box>
       </Container>
     </Box>
   );
