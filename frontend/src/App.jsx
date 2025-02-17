@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material';
+import CssBaseline from '@mui/material/CssBaseline';
 import ProjectList from './features/projects/ProjectList';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import ProjectForm from './features/projects/ProjectForm';
+import ProjectDetail from './features/projects/ProjectDetail';
 
 const theme = createTheme({
   palette: {
@@ -32,6 +35,9 @@ function App() {
         <Routes>
           <Route path="/" element={<ProjectList />} />
           <Route path="/projects" element={<ProjectList />} />
+          <Route path="/projects/new" element={<ProjectForm />} />
+          <Route path="/projects/:id" element={<ProjectDetail />} />
+          <Route path="/projects/:id/edit" element={<ProjectForm />} />
         </Routes>
       </Router>
     </ThemeProvider>
