@@ -12,6 +12,8 @@ function App() {
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
   const markerRef = useRef(null)
+  const [youtoVisible, setYoutoVisible] = useState(false);
+  const [balloon, setBalloon] = useState(null);
 
   useEffect(() => {
     // 地図の初期化
@@ -59,6 +61,140 @@ function App() {
       });
     }
   }, []);
+
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    const map = mapInstanceRef.current;
+    
+    const setYouto = () => {
+      map.removeAllWidgets();
+      const size = map.getMapSize();
+      const data = {
+        'VERSION': '1.3.0',
+        'REQUEST': 'GetMap',
+        'LAYERS': 'lp1,ll1',
+        'CRS': 'EPSG:3857',
+        'BBOX': getBBOX(map),
+        'WIDTH': size.width,
+        'HEIGHT': size.height,
+        'FORMAT': 'image/png',
+        'INFO_FORMAT': 'application/json'
+      };
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'https://test-web.zmaps-api.com/map/wms/youto');
+      xhr.setRequestHeader('x-api-key', '4ljryyuYKp3pdOu0ipaSinCXdrZbY1wSSnqILF30');
+      xhr.setRequestHeader('Authorization', 'referer');
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      xhr.responseType = 'blob';
+      
+      xhr.onload = function() {
+        if (this.status === 200) {
+          const widget = new window.ZDC.UserWidget(
+            map.getLatLngBounds().getNorthWest(),
+            {
+              htmlSource: '<img id="youto" src="">',
+              propagation: true
+            }
+          );
+          map.addWidget(widget);
+
+          const url = window.URL || window.webkitURL;
+          const img = document.getElementById("youto");
+          img.src = url.createObjectURL(this.response);
+        }
+      };
+      xhr.send(encodeData(data));
+    };
+
+    const getFeatureInfo = (ev) => {
+      const size = map.getMapSize();
+      const data = {
+        'VERSION': '1.3.0',
+        'REQUEST': 'GetFeatureInfo',
+        'LAYERS': 'lp1,ll1',
+        'CRS': 'EPSG:3857',
+        'BBOX': getBBOX(map),
+        'WIDTH': size.width,
+        'HEIGHT': size.height,
+        'FORMAT': 'image/png',
+        'INFO_FORMAT': 'application/json',
+        'FEATURE_COUNT': 1,
+        'QUERY_LAYERS': 'lp1,ll1',
+        'I': ev.point.x,
+        'J': ev.point.y,
+      };
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'https://test-web.zmaps-api.com/map/wms/youto');
+      xhr.setRequestHeader('x-api-key', '4ljryyuYKp3pdOu0ipaSinCXdrZbY1wSSnqILF30');
+      xhr.setRequestHeader('Authorization', 'referer');
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      xhr.responseType = 'json';
+      
+      xhr.onload = function() {
+        if (this.status === 200 && this.response && this.response.features && this.response.features.length > 0) {
+          if (balloon) {
+            map.removeWidget(balloon);
+          }
+
+          const feature = this.response.features[0];
+          if (feature.properties) {
+            const newBalloon = new window.ZDC.UserWidget(
+              new window.ZDC.LatLng(ev.latlng.lat, ev.latlng.lng),
+              {
+                htmlSource: `<div class="balloon"><p>${feature.properties.map || ''} ${feature.properties.koudo || ''}</p></div>`,
+                propagation: true
+              }
+            );
+            map.addWidget(newBalloon);
+            setBalloon(newBalloon);
+          }
+        }
+      };
+
+      xhr.onerror = function() {
+        console.error('用途地域情報の取得に失敗しました');
+      };
+
+      xhr.send(encodeData(data));
+    };
+
+    const redrawLayer = () => {
+      if (youtoVisible) {
+        setYouto();
+      }
+    };
+
+    map.addEventListener('idle', redrawLayer);
+    map.addEventListener('click', getFeatureInfo);
+
+    return () => {
+      map.removeEventListener('idle', redrawLayer);
+      map.removeEventListener('click', getFeatureInfo);
+    };
+  }, [youtoVisible]);
+
+  const getBBOX = (map) => {
+    const bound = map.getLatLngBounds();
+    const p1 = bound.getSouthWest();
+    const p2 = bound.getNorthEast();
+
+    const p1Mercator = map.latlngToWebMercator(p1);
+    const p2Mercator = map.latlngToWebMercator(p2);
+    return p1Mercator.concat(p2Mercator).join(',');
+  };
+
+  const encodeData = (data) => {
+    const params = [];
+    for (const name in data) {
+      const value = data[name];
+      const param = encodeURIComponent(name) + '=' + encodeURIComponent(value);
+      params.push(param);
+    }
+    return params.join('&').replace(/%20/g, '+');
+  };
 
   const handleSearch = async () => {
     try {
@@ -226,6 +362,32 @@ function App() {
           >
             <SearchIcon />
           </IconButton>
+        </Box>
+
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          width: '100%',
+          maxWidth: 600,
+          mx: 'auto',
+          bgcolor: 'white',
+          borderRadius: 2,
+          overflow: 'hidden',
+          boxShadow: 1,
+          mb: 4
+        }}>
+          <div className="form-check form-switch form-switch-custom py-1">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              id="youtoSwitch"
+              checked={youtoVisible}
+              onChange={(e) => setYoutoVisible(e.target.checked)}
+            />
+            <label className="form-check-label" htmlFor="youtoSwitch">
+              用途地域
+            </label>
+          </div>
         </Box>
 
         {error && (
