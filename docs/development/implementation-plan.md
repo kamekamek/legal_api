@@ -32,18 +32,18 @@
     - 削除確認
     ```
 
-- [ ] バックエンドテスト
-  - [ ] プロジェクトCRUD API
+- [x] バックエンドテスト
+  - [x] プロジェクトCRUD API
     ```javascript
-    // 実装予定のテスト
+    // 実装済みのテスト
     - 一覧取得 (GET /api/v1/projects)
     - 詳細取得 (GET /api/v1/projects/:id)
     - 作成 (POST /api/v1/projects)
     - 更新 (PUT /api/v1/projects/:id)
     - 削除 (DELETE /api/v1/projects/:id)
     ```
-  - [ ] バリデーション
-  - [ ] エラーハンドリング
+  - [x] バリデーション
+  - [x] エラーハンドリング
 
 ### 1.3 機能実装
 - [ ] バックエンド実装
