@@ -10,7 +10,6 @@ import {
   CircularProgress,
   Grid
 } from '@mui/material';
-import { YOUTO_MAPPING } from '../../constants/zoneTypes';
 
 const ProjectForm = () => {
   const navigate = useNavigate();
@@ -25,9 +24,7 @@ const ProjectForm = () => {
     status: 'planning',
     start_date: '',
     end_date: '',
-    zoneMap: '',
-    heightDistrict: '',
-    buildingUsage: ''
+    location: ''
   });
 
   useEffect(() => {
@@ -49,9 +46,7 @@ const ProjectForm = () => {
         status: data.status || 'planning',
         start_date: data.start_date || '',
         end_date: data.end_date || '',
-        zoneMap: data.zoneMap || '',
-        heightDistrict: data.heightDistrict || '',
-        buildingUsage: data.buildingUsage || ''
+        location: data.location || ''
       });
     } catch (error) {
       setError(error.message);
@@ -135,7 +130,7 @@ const ProjectForm = () => {
                 rows={4}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 select
@@ -147,22 +142,6 @@ const ProjectForm = () => {
                 <MenuItem value="planning">計画中</MenuItem>
                 <MenuItem value="in_progress">進行中</MenuItem>
                 <MenuItem value="completed">完了</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                select
-                label="建物用途"
-                name="buildingUsage"
-                value={formData.buildingUsage}
-                onChange={handleChange}
-              >
-                {Object.entries(YOUTO_MAPPING).map(([key, value]) => (
-                  <MenuItem key={key} value={key}>
-                    {value}
-                  </MenuItem>
-                ))}
               </TextField>
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -194,21 +173,10 @@ const ProjectForm = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="用途地域情報"
-                name="zoneMap"
-                value={formData.zoneMap}
+                label="住所"
+                name="location"
+                value={formData.location}
                 onChange={handleChange}
-                helperText="形式: 区域区分:用途地域:建ぺい率:容積率:防火地域"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="高度地区情報"
-                name="heightDistrict"
-                value={formData.heightDistrict}
-                onChange={handleChange}
-                helperText="形式: 最高高度:最低高度:最高高度規制:最低高度規制"
               />
             </Grid>
             <Grid item xs={12}>
