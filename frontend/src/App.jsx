@@ -14,6 +14,7 @@ function App() {
   const markerRef = useRef(null)
   const [youtoVisible, setYoutoVisible] = useState(false);
   const [balloon, setBalloon] = useState(null);
+  const [currentZoom, setCurrentZoom] = useState(17);
 
   useEffect(() => {
     // 地図の初期化
@@ -70,10 +71,18 @@ function App() {
     const setYouto = () => {
       map.removeAllWidgets();
       const size = map.getMapSize();
+      const zoom = map.getZoom();
+      setCurrentZoom(zoom);
+
+      // ズームレベルが15未満の場合は表示しない
+      if (zoom < 15) {
+        return;
+      }
+
       const data = {
         'VERSION': '1.3.0',
         'REQUEST': 'GetMap',
-        'LAYERS': 'lp1,ll1',
+        'LAYERS': zoom >= 17 ? 'lp1,ll1' : 'lp1',
         'CRS': 'EPSG:3857',
         'BBOX': getBBOX(map),
         'WIDTH': size.width,
@@ -109,11 +118,18 @@ function App() {
     };
 
     const getFeatureInfo = (ev) => {
+      const zoom = map.getZoom();
+      // ズームレベルが15未満の場合は情報を表示しない
+      if (zoom < 15) {
+        return;
+      }
+
       const size = map.getMapSize();
       const data = {
         'VERSION': '1.3.0',
         'REQUEST': 'GetFeatureInfo',
-        'LAYERS': 'lp1,ll1',
+        'LAYERS': zoom >= 17 ? 'lp1,ll1' : 'lp1',
+        'QUERY_LAYERS': zoom >= 17 ? 'lp1,ll1' : 'lp1',
         'CRS': 'EPSG:3857',
         'BBOX': getBBOX(map),
         'WIDTH': size.width,
@@ -121,7 +137,6 @@ function App() {
         'FORMAT': 'image/png',
         'INFO_FORMAT': 'application/json',
         'FEATURE_COUNT': 1,
-        'QUERY_LAYERS': 'lp1,ll1',
         'I': ev.point.x,
         'J': ev.point.y,
       };
@@ -383,9 +398,10 @@ function App() {
               id="youtoSwitch"
               checked={youtoVisible}
               onChange={(e) => setYoutoVisible(e.target.checked)}
+              disabled={currentZoom < 15}
             />
             <label className="form-check-label" htmlFor="youtoSwitch">
-              用途地域
+              用途地域 {currentZoom < 15 && '(ズームインしてください)'}
             </label>
           </div>
         </Box>
