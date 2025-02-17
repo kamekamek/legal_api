@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import LegalInfo from '../legal/LegalInfo';
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -40,7 +41,15 @@ const ProjectDetail = () => {
           throw new Error('プロジェクトの取得に失敗しました');
         }
         const data = await response.json();
-        setProject(data.project);
+        
+        // 法令情報の取得
+        const legalResponse = await fetch(`http://localhost:3001/api/v1/legal/check?projectId=${id}`);
+        if (legalResponse.ok) {
+          const legalData = await legalResponse.json();
+          setProject({ ...data.project, ...legalData });
+        } else {
+          setProject(data.project);
+        }
       } catch (error) {
         console.error('Error:', error);
         setError(error.message);
@@ -225,6 +234,8 @@ const ProjectDetail = () => {
             </Grid>
           </Grid>
         </Paper>
+
+        <LegalInfo projectData={project} />
       </Box>
 
       <Dialog

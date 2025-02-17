@@ -7,8 +7,10 @@ import {
   Typography,
   Paper,
   MenuItem,
-  CircularProgress
+  CircularProgress,
+  Grid
 } from '@mui/material';
+import { YOUTO_MAPPING } from '../../constants/zoneTypes';
 
 const ProjectForm = () => {
   const navigate = useNavigate();
@@ -22,7 +24,10 @@ const ProjectForm = () => {
     description: '',
     status: 'planning',
     start_date: '',
-    end_date: ''
+    end_date: '',
+    zoneMap: '',
+    heightDistrict: '',
+    buildingUsage: ''
   });
 
   useEffect(() => {
@@ -43,7 +48,10 @@ const ProjectForm = () => {
         description: data.description || '',
         status: data.status || 'planning',
         start_date: data.start_date || '',
-        end_date: data.end_date || ''
+        end_date: data.end_date || '',
+        zoneMap: data.zoneMap || '',
+        heightDistrict: data.heightDistrict || '',
+        buildingUsage: data.buildingUsage || ''
       });
     } catch (error) {
       setError(error.message);
@@ -94,7 +102,7 @@ const ProjectForm = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4 }}>
+    <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4 }}>
       <Paper sx={{ p: 3 }}>
         <Typography variant="h5" component="h2" gutterBottom>
           {isEditMode ? 'プロジェクト編集' : '新規プロジェクト作成'}
@@ -105,78 +113,122 @@ const ProjectForm = () => {
           </Typography>
         )}
         <form onSubmit={handleSubmit}>
-          <TextField
-            fullWidth
-            label="プロジェクト名"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            margin="normal"
-            required
-          />
-          <TextField
-            fullWidth
-            label="説明"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            margin="normal"
-            multiline
-            rows={4}
-          />
-          <TextField
-            fullWidth
-            select
-            label="ステータス"
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            margin="normal"
-          >
-            <MenuItem value="planning">計画中</MenuItem>
-            <MenuItem value="in_progress">進行中</MenuItem>
-            <MenuItem value="completed">完了</MenuItem>
-          </TextField>
-          <TextField
-            fullWidth
-            label="開始日"
-            name="start_date"
-            type="date"
-            value={formData.start_date}
-            onChange={handleChange}
-            margin="normal"
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-          <TextField
-            fullWidth
-            label="終了日"
-            name="end_date"
-            type="date"
-            value={formData.end_date}
-            onChange={handleChange}
-            margin="normal"
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-          <Box sx={{ mt: 3 }}>
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              sx={{ mr: 2 }}
-            >
-              {isEditMode ? '更新' : '作成'}
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => navigate('/projects')}
-            >
-              キャンセル
-            </Button>
-          </Box>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="プロジェクト名"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="説明"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                multiline
+                rows={4}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                select
+                label="ステータス"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+              >
+                <MenuItem value="planning">計画中</MenuItem>
+                <MenuItem value="in_progress">進行中</MenuItem>
+                <MenuItem value="completed">完了</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                select
+                label="建物用途"
+                name="buildingUsage"
+                value={formData.buildingUsage}
+                onChange={handleChange}
+              >
+                {Object.entries(YOUTO_MAPPING).map(([key, value]) => (
+                  <MenuItem key={key} value={key}>
+                    {value}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="開始日"
+                name="start_date"
+                type="date"
+                value={formData.start_date}
+                onChange={handleChange}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="終了日"
+                name="end_date"
+                type="date"
+                value={formData.end_date}
+                onChange={handleChange}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="用途地域情報"
+                name="zoneMap"
+                value={formData.zoneMap}
+                onChange={handleChange}
+                helperText="形式: 区域区分:用途地域:建ぺい率:容積率:防火地域"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="高度地区情報"
+                name="heightDistrict"
+                value={formData.heightDistrict}
+                onChange={handleChange}
+                helperText="形式: 最高高度:最低高度:最高高度規制:最低高度規制"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                >
+                  {isEditMode ? '更新' : '作成'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/projects')}
+                >
+                  キャンセル
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
         </form>
       </Paper>
     </Box>
