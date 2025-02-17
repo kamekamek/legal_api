@@ -1,10 +1,53 @@
 import { useState, useEffect, useRef } from 'react'
-import { TextField, IconButton, Container, Box, Typography, Paper } from '@mui/material'
+import { TextField, IconButton, Container, Box, Typography, Paper, Button, Dialog, DialogTitle, DialogContent } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import FullscreenIcon from '@mui/icons-material/Fullscreen'
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
+import CloseIcon from '@mui/icons-material/Close'
 import axios from 'axios'
 import { YOUTO_MAPPING, BOUKA_MAPPING, TOKEI_MAPPING, parseHeightDistrict, parseZoneMap, parseScenicDistrict, parseRatios, ZONE_DIVISION_MAPPING } from './constants/zoneTypes';
+
+// コンポーネントをApp関数の外に移動
+const KokujiDialog = ({ open, onClose, kokujiText }) => {
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          height: '80vh',
+          display: 'flex',
+          flexDirection: 'column'
+        }
+      }}
+    >
+      <DialogTitle>
+        告示文
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          sx={{ position: 'absolute', right: 8, top: 8 }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        <Box sx={{ 
+          fontFamily: 'serif',
+          fontSize: '1.1rem',
+          lineHeight: 1.8,
+          whiteSpace: 'pre-wrap',
+          overflowY: 'auto',
+          padding: 2
+        }}>
+          {kokujiText}
+        </Box>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 function App() {
   const [address, setAddress] = useState('')
@@ -20,6 +63,7 @@ function App() {
   const [balloon, setBalloon] = useState(null)
   const [currentZoom, setCurrentZoom] = useState(17)
   const [kokujiText, setKokujiText] = useState(null)
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   // 固定の告示ID
   const FIXED_KOKUJI_ID = '412K500040001453';
@@ -235,10 +279,19 @@ function App() {
 
         setLandUseInfo(landUseResponse.data);
         
-        // オーバーレイを再描画
-        if (youtoVisible) {
-          setYouto();
-        }
+        // APIレスポンスの詳細ログ
+        console.log('APIリクエスト:', {
+          lat: lat,
+          lng: lng
+        });
+        
+        console.log('API Response:', {
+          ...landUseResponse.data,
+          高度地区: landUseResponse.data.koudo,
+          高度地区制限値: landUseResponse.data.koudo2
+        });
+        
+        setLandUseInfo(landUseResponse.data);
       } catch (error) {
         console.error('Search error:', error);
         setError('検索中にエラーが発生しました。' + (error.message || ''));
@@ -688,7 +741,21 @@ function App() {
                     })()} />
                     <InfoRow label="建築基準法48条" value="準備中" />
                     <InfoRow label="法別表第２" value="準備中" />
-                    <InfoRow label="告示文" value={kokujiText || '−'} />
+                    <InfoRow 
+                      label="告示文"
+                      value={
+                        kokujiText ? (
+                          <Button
+                            variant="contained"
+                            onClick={() => setDialogOpen(true)}
+                            size="small"
+                            sx={{ ml: 'auto' }}
+                          >
+                            告示文を表示
+                          </Button>
+                        ) : '−'
+                      }
+                    />
                     <InfoRow label="東京都建築安全条例" value="準備中" />
                   </Box>
                 </Box>
@@ -697,18 +764,20 @@ function App() {
           </Paper>
         </Box>
       </Container>
+      <KokujiDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        kokujiText={kokujiText}
+      />
     </Box>
   );
 }
 
 function InfoRow({ label, value }) {
-  // 告示文の場合は特別なスタイルを適用
-  const isKokuji = label === '告示文';
-  
   return (
     <Box sx={{ 
       display: 'flex', 
-      flexDirection: { xs: 'column', sm: isKokuji ? 'column' : 'row' },  // 告示文の場合は常に縦並び
+      flexDirection: { xs: 'column', sm: 'row' },  
       borderBottom: '1px solid #eee', 
       py: 1.5,
       '&:last-child': {
@@ -718,10 +787,10 @@ function InfoRow({ label, value }) {
       <Typography 
         component="div" 
         sx={{ 
-          width: { xs: '100%', sm: isKokuji ? '100%' : '25%' },  // 告示文の場合はラベルも100%幅
+          width: { xs: '100%', sm: '25%' },  
           color: 'text.secondary',
           fontWeight: 500,
-          mb: { xs: 1, sm: isKokuji ? 1 : 0 }  // 告示文の場合は常に下マージンを付ける
+          mb: { xs: 1, sm: 0 }  
         }}
       >
         {label}
@@ -729,13 +798,13 @@ function InfoRow({ label, value }) {
       <Typography 
         component="div" 
         sx={{ 
-          width: { xs: '100%', sm: isKokuji ? '100%' : '75%' },  // 告示文の場合は値も100%幅
+          width: { xs: '100%', sm: '75%' },  
           whiteSpace: 'pre-line',
-          lineHeight: isKokuji ? 1.8 : 1.5,  // 告示文の場合は行間を広げる
-          fontSize: isKokuji ? '0.95rem' : 'inherit',  // 告示文の場合はフォントサイズを少し小さく
-          letterSpacing: isKokuji ? '0.03em' : 'inherit',  // 告示文の場合は文字間隔を広げる
+          lineHeight: 1.5,  
+          fontSize: 'inherit',  
+          letterSpacing: 'inherit',  
           '& > p': {
-            marginBottom: isKokuji ? '1em' : 0  // 告示文の段落間の余白を追加
+            marginBottom: 0  
           }
         }}
       >
