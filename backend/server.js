@@ -4,7 +4,7 @@ const cors = require('cors');
 const axios = require('axios');
 
 const app = express();
-const port = process.env.PORT || 3002;
+const port = process.env.PORT || 3001;
 
 // Zenrin WMS APIの設定
 const ZENRIN_API_KEY = process.env.ZENRIN_API_KEY;
@@ -126,7 +126,7 @@ app.get('/api/kokuji/:kokuji_id', async (req, res) => {
   try {
     const { kokuji_id } = req.params;
     const response = await axios.get(
-      'https://kokujiapi.azurewebsites.net/api/v1/getKokuji',
+      `https://kokujiapi.azurewebsites.net/api/v1/getKokuji`,
       {
         params: {
           kokuji_id,
@@ -137,7 +137,6 @@ app.get('/api/kokuji/:kokuji_id', async (req, res) => {
         }
       }
     );
-
     res.json({
       status: 'success',
       data: {
@@ -147,8 +146,11 @@ app.get('/api/kokuji/:kokuji_id', async (req, res) => {
       }
     });
   } catch (error) {
-    const { statusCode, message } = handleApiError(error, '告示文の取得に失敗しました');
-    res.status(statusCode).json({ error: message });
+    console.error('告示文取得エラー:', error);
+    res.status(500).json({ 
+      status: 'error',
+      message: '告示文の取得に失敗しました'
+    });
   }
 });
 

@@ -19,6 +19,15 @@ function App() {
   const [youtoVisible, setYoutoVisible] = useState(false)
   const [balloon, setBalloon] = useState(null)
   const [currentZoom, setCurrentZoom] = useState(17)
+  const [kokujiText, setKokujiText] = useState(null)
+
+  // 固定の告示ID
+  const FIXED_KOKUJI_ID = '412K500040001453';
+
+  useEffect(() => {
+    // 初期表示時に告示文を取得
+    fetchKokujiText(FIXED_KOKUJI_ID);
+  }, []); // コンポーネントマウント時のみ実行
 
   useEffect(() => {
     // 地図の初期化
@@ -360,6 +369,18 @@ function App() {
     }
   };
 
+  const fetchKokujiText = async (kokujiId) => {
+    try {
+      const response = await axios.get(`http://localhost:3001/api/kokuji/${kokujiId}`);
+      if (response.data.status === 'success') {
+        setKokujiText(response.data.data.kokuji_text);
+      }
+    } catch (error) {
+      console.error('告示文取得エラー:', error);
+      setKokujiText('取得に失敗しました');
+    }
+  };
+
   return (
     <Box sx={{ 
       bgcolor: 'white',
@@ -666,7 +687,7 @@ function App() {
                     })()} />
                     <InfoRow label="建築基準法48条" value="準備中" />
                     <InfoRow label="法別表第２" value="準備中" />
-                    <InfoRow label="告示文" value="準備中" />
+                    <InfoRow label="告示文" value={kokujiText || '−'} />
                     <InfoRow label="東京都建築安全条例" value="準備中" />
                   </Box>
                 </Box>
