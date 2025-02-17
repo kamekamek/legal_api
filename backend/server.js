@@ -4,7 +4,7 @@ const cors = require('cors');
 const axios = require('axios');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3002;
 
 // Zenrin WMS APIの設定
 const ZENRIN_API_KEY = process.env.ZENRIN_API_KEY;
@@ -118,6 +118,37 @@ app.get('/api/landuse', async (req, res) => {
       error: '用途地域情報の取得に失敗しました',
       details: error.response?.data || error.message
     });
+  }
+});
+
+// 告示文取得エンドポイント
+app.get('/api/kokuji/:kokuji_id', async (req, res) => {
+  try {
+    const { kokuji_id } = req.params;
+    const response = await axios.get(
+      'https://kokujiapi.azurewebsites.net/api/v1/getKokuji',
+      {
+        params: {
+          kokuji_id,
+          response_format: 'plain'
+        },
+        headers: {
+          'accept': 'application/xml'
+        }
+      }
+    );
+
+    res.json({
+      status: 'success',
+      data: {
+        kokuji_text: response.data,
+        kokuji_id,
+        updated_at: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    const { statusCode, message } = handleApiError(error, '告示文の取得に失敗しました');
+    res.status(statusCode).json({ error: message });
   }
 });
 

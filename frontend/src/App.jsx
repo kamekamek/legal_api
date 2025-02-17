@@ -15,9 +15,10 @@ function App() {
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
   const markerRef = useRef(null)
-  const [youtoVisible, setYoutoVisible] = useState(false);
-  const [balloon, setBalloon] = useState(null);
-  const [currentZoom, setCurrentZoom] = useState(17);
+  const youtoOverlayRef = useRef(null)
+  const [youtoVisible, setYoutoVisible] = useState(false)
+  const [balloon, setBalloon] = useState(null)
+  const [currentZoom, setCurrentZoom] = useState(17)
 
   useEffect(() => {
     // 地図の初期化
@@ -72,7 +73,20 @@ function App() {
     const map = mapInstanceRef.current;
     
     const setYouto = () => {
-      map.removeAllWidgets();
+      const map = mapInstanceRef.current;
+      
+      // バルーンを削除
+      if (balloon) {
+        map.removeWidget(balloon);
+        setBalloon(null);
+      }
+
+      // 既存の用途地域オーバーレイを削除
+      if (youtoOverlayRef.current) {
+        map.removeWidget(youtoOverlayRef.current);
+        youtoOverlayRef.current = null;
+      }
+
       const size = map.getMapSize();
       const zoom = map.getZoom();
       setCurrentZoom(zoom);
@@ -111,6 +125,7 @@ function App() {
             }
           );
           map.addWidget(widget);
+          youtoOverlayRef.current = widget; // 参照を保存
 
           const url = window.URL || window.webkitURL;
           const img = document.getElementById("youto");
