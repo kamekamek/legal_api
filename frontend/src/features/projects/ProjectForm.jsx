@@ -161,15 +161,15 @@ const ProjectForm = () => {
           value={formData.status}
           onChange={handleChange}
           label="ステータス"
-          aria-label="ステータス"
+          data-testid="status-select"
         >
-          <MenuItem value="planning">計画中</MenuItem>
-          <MenuItem value="in_progress">進行中</MenuItem>
-          <MenuItem value="completed">完了</MenuItem>
-          <MenuItem value="on_hold">保留中</MenuItem>
+          <MenuItem value="planning" data-testid="status-option-planning">計画中</MenuItem>
+          <MenuItem value="in_progress" data-testid="status-option-in-progress">進行中</MenuItem>
+          <MenuItem value="completed" data-testid="status-option-completed">完了</MenuItem>
+          <MenuItem value="on_hold" data-testid="status-option-on-hold">保留中</MenuItem>
         </Select>
         {validationErrors.status && (
-          <FormHelperText>{validationErrors.status}</FormHelperText>
+          <FormHelperText data-testid="status-error">{validationErrors.status}</FormHelperText>
         )}
       </FormControl>
 
