@@ -4,6 +4,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import ProjectList from './features/projects/ProjectList';
 import ProjectForm from './features/projects/ProjectForm';
 import ProjectDetail from './features/projects/ProjectDetail';
+import ZoneSearch from './features/legal/ZoneSearch';
 
 const theme = createTheme({
   palette: {
@@ -38,6 +39,7 @@ function App() {
           <Route path="/projects/new" element={<ProjectForm />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/projects/:id/edit" element={<ProjectForm />} />
+          <Route path="/legal/zone-search" element={<ZoneSearch />} />
         </Routes>
       </Router>
     </ThemeProvider>
