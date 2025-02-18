@@ -22,16 +22,25 @@
 
 ## 3. 実装状況
 
-### 3.1 実装済み機能 ✅
+### 3.1 実装済み機能 
 1. **地図表示基本機能**
    - Zenrin Maps APIによる地図表示
    - 地点選択機能
    - 用途地域情報の表示
+   - 住所検索機能
+   - 法令情報の自動取得
+   - 地図表示の最適化（キャッシュ機能）
+   - エラーハンドリングとリトライ機能
+   - ヘルプ機能
 
 2. **プロジェクト管理基本機能**
    - プロジェクトCRUD操作
    - プロジェクト一覧表示
    - プロジェクト詳細表示
+     - 基本情報の表示（名前、所在地、期間、説明）
+     - プロジェクトステータス表示
+     - 編集・削除機能
+     - 地図検索への遷移
    - 基本情報の編集
 
 3. **バックエンド基盤**
@@ -45,10 +54,17 @@
    - レスポンシブ対応の基本構造
    - エラーハンドリング
 
-### 3.2 開発中の機能 🚧
+### 3.2 開発中の機能 
 1. **プロジェクト管理機能の拡張**
-   - 法令情報の編集
-   - 住所からの法令情報自動取得
+   - プロジェクト詳細画面の拡充
+     - 法令情報の表示機能の改善
+       - 建ぺい率・容積率の表示
+       - 高度地区情報の表示
+       - 用途地域情報の表示
+     - 法令情報の編集機能の拡充
+       - 規制値の直接編集
+       - 告示情報の編集
+     - 地図連携機能の強化
    - プロジェクトステータス管理
    - 検索・フィルタリング機能
 
@@ -61,7 +77,7 @@
    - チェックリスト基本UI
    - ステータス管理機能
 
-### 3.3 今後の実装予定 📝
+### 3.3 今後の実装予定 
 1. **法令チェックリスト機能の拡充**
    - プロジェクト情報に基づく自動生成
    - 進捗管理機能
@@ -85,6 +101,39 @@ CREATE TABLE projects (
     status VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 法令文書
+CREATE TABLE legal_documents (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id),
+    location TEXT NOT NULL,
+    latitude FLOAT NOT NULL,
+    longitude FLOAT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 用途地域情報
+CREATE TABLE zone_info (
+    id SERIAL PRIMARY KEY,
+    legal_document_id INTEGER REFERENCES legal_documents(id),
+    zone_type VARCHAR(100) NOT NULL,
+    regulations JSONB NOT NULL,
+    coverage_ratio FLOAT,
+    floor_area_ratio FLOAT,
+    height_restrictions JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 告示情報
+CREATE TABLE kokuji_info (
+    id SERIAL PRIMARY KEY,
+    legal_document_id INTEGER REFERENCES legal_documents(id),
+    kokuji_id VARCHAR(100) NOT NULL,
+    kokuji_text TEXT NOT NULL,
+    effective_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 法令更新情報
@@ -141,6 +190,15 @@ GET    /api/v1/projects/:id       # プロジェクト詳細取得
 PUT    /api/v1/projects/:id       # プロジェクト更新
 DELETE /api/v1/projects/:id       # プロジェクト削除
 
+## 法令情報 API
+POST   /api/v1/projects/:id/legal-docs     # 法令情報保存
+GET    /api/v1/projects/:id/legal-docs     # プロジェクトの法令情報一覧取得
+GET    /api/v1/legal-docs/:id              # 法令情報詳細取得
+PUT    /api/v1/legal-docs/:id              # 法令情報更新
+DELETE /api/v1/legal-docs/:id              # 法令情報削除
+PATCH  /api/v1/legal-docs/:id/regulations  # 規制情報の部分更新
+PATCH  /api/v1/legal-docs/:id/kokuji       # 告示情報の部分更新
+
 ## 用途地域 API
 GET    /api/v1/zoning/search      # 用途地域検索
 GET    /api/v1/zoning/:id/details # 用途地域詳細取得
@@ -164,8 +222,10 @@ PUT    /api/v1/checklist-items/:id        # チェックリスト項目更新
 
 ### 6.1 短期目標（1-2週間）
 1. プロジェクト管理機能の完成
-   - 法令情報編集機能の実装
-   - 住所からの法令情報自動取得の実装
+   - プロジェクト詳細画面の実装
+     - 法令情報一覧コンポーネントの作成
+     - 編集フォームの実装
+     - 地図連携機能の統合
    - 検索・フィルタリング機能の実装
 
 2. テストカバレッジの向上
