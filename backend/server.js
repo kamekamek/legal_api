@@ -9,6 +9,7 @@ const port = process.env.PORT || 3001;
 // Zenrin WMS APIの設定
 const ZENRIN_API_KEY = process.env.ZENRIN_API_KEY;
 const ZENRIN_WMS_URL = 'https://test-web.zmaps-api.com/map/wms/youto';
+const ZENRIN_GEOCODE_URL = 'https://test-web.zmaps-api.com/geocode';
 
 app.use(cors({
   origin: process.env.CORS_ORIGIN,
@@ -23,6 +24,50 @@ const handleApiError = (error, defaultMessage) => {
   const message = error.response?.data?.message || defaultMessage;
   return { statusCode, message };
 };
+
+// 住所検索APIエンドポイント
+app.post('/api/legal/address/search', async (req, res) => {
+  try {
+    const { address } = req.body;
+    if (!address) {
+      return res.status(400).json({ error: '住所を入力してください' });
+    }
+
+    // Zenrinジオコーディング APIを呼び出し
+    const geocodeResponse = await axios.get(ZENRIN_GEOCODE_URL, {
+      params: {
+        'q': address,
+        'output': 'json'
+      },
+      headers: {
+        'x-api-key': ZENRIN_API_KEY
+      }
+    });
+
+    if (!geocodeResponse.data || !geocodeResponse.data.features || geocodeResponse.data.features.length === 0) {
+      return res.status(404).json({ error: '住所が見つかりませんでした' });
+    }
+
+    const location = geocodeResponse.data.features[0].geometry.coordinates;
+    const [lng, lat] = location;
+
+    // 用途地域情報を取得
+    const landUseResponse = await axios.get(`${process.env.CORS_ORIGIN}/api/landuse`, {
+      params: { lat, lng }
+    });
+
+    res.json({
+      location: { lat, lng },
+      landUseInfo: landUseResponse.data
+    });
+  } catch (error) {
+    console.error('Address Search Error:', error);
+    res.status(500).json({ 
+      error: '住所検索に失敗しました',
+      details: error.response?.data || error.message
+    });
+  }
+});
 
 // 用途地域情報取得エンドポイント
 app.get('/api/landuse', async (req, res) => {

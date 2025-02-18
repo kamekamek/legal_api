@@ -1,8 +1,8 @@
 import React from 'react';
-import { Box, TextField, IconButton, Typography } from '@mui/material';
+import { Box, TextField, IconButton, Typography, CircularProgress } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 
-const SearchBar = ({ address, onAddressChange, onSearch, error }) => {
+const SearchBar = ({ address, onAddressChange, onSearch, error, loading }) => {
   return (
     <>
       <Box sx={{ 
@@ -23,10 +23,11 @@ const SearchBar = ({ address, onAddressChange, onSearch, error }) => {
           value={address}
           onChange={(e) => onAddressChange(e.target.value)}
           onKeyPress={(e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !loading) {
               onSearch();
             }
           }}
+          disabled={loading}
           sx={{ 
             '& .MuiOutlinedInput-root': {
               '& fieldset': { border: 'none' },
@@ -38,17 +39,18 @@ const SearchBar = ({ address, onAddressChange, onSearch, error }) => {
         />
         <IconButton 
           onClick={onSearch}
+          disabled={loading}
           sx={{ 
-            bgcolor: '#1a237e',
+            bgcolor: loading ? 'grey.300' : '#1a237e',
             borderRadius: 1,
             color: 'white',
             m: 1,
             '&:hover': {
-              bgcolor: '#000051'
+              bgcolor: loading ? 'grey.300' : '#000051'
             }
           }}
         >
-          <SearchIcon />
+          {loading ? <CircularProgress size={24} color="inherit" /> : <SearchIcon />}
         </IconButton>
       </Box>
 

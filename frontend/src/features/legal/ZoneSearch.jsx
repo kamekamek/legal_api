@@ -5,7 +5,8 @@ import {
   Container,
   Box,
   Typography,
-  Paper
+  Paper,
+  CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { parseHeightDistrict, parseZoneMap, parseScenicDistrict } from '../../constants/zoneTypes';
@@ -18,6 +19,7 @@ const ZoneSearch = () => {
   const [location, setLocation] = useState(null);
   const [landUseInfo, setLandUseInfo] = useState(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
@@ -25,6 +27,7 @@ const ZoneSearch = () => {
   const handleSearch = async () => {
     try {
       setError('');
+      setLoading(true);
       
       if (!address) {
         setError('住所を入力してください');
@@ -32,7 +35,7 @@ const ZoneSearch = () => {
       }
 
       // 住所検索APIを呼び出し
-      const response = await fetch('/api/legal/address/search', {
+      const response = await fetch('http://localhost:3001/api/legal/address/search', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,13 +43,13 @@ const ZoneSearch = () => {
         body: JSON.stringify({ address })
       });
 
-      if (!response.ok) {
-        throw new Error('検索に失敗しました');
-      }
-
       const data = await response.json();
 
-      if (data.location) {
+      if (!response.ok) {
+        throw new Error(data.error || '検索に失敗しました');
+      }
+
+      if (data.location && data.landUseInfo) {
         setLocation(data.location);
         setLandUseInfo(data.landUseInfo);
       } else {
@@ -54,7 +57,9 @@ const ZoneSearch = () => {
       }
     } catch (error) {
       console.error('Search error:', error);
-      setError('検索中にエラーが発生しました: ' + error.message);
+      setError(error.message || '検索中にエラーが発生しました');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -96,6 +101,7 @@ const ZoneSearch = () => {
           onAddressChange={setAddress}
           onSearch={handleSearch}
           error={error}
+          loading={loading}
         />
 
         {landUseInfo && (
