@@ -341,11 +341,11 @@ const ZoneSearch = () => {
       if (response.data) {
         setLandUseInfo(response.data);
         
-        // 告示文を取得
+        // 固定の告示ID「412K500040001453」で告示文を取得する
         try {
-          const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`);  // 固定の告示ID
-          if (kokujiResponse.data && kokujiResponse.data.kokujiText) {
-            setKokujiText(kokujiResponse.data.kokujiText);
+          const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`);
+          if (kokujiResponse.data && kokujiResponse.data.kokuji_text) {
+            setKokujiText(kokujiResponse.data.kokuji_text);
           }
         } catch (error) {
           console.error('告示文取得エラー:', error);

@@ -170,30 +170,6 @@ app.get('/api/landuse', async (req, res) => {
   }
 });
 
-// 告示文取得エンドポイント
-app.get('/api/kokuji/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // 固定の告示文を返す（実際のプロダクションでは、データベースやAPIから取得する）
-    const kokujiText = `東京都告示第千四百五十三号
-    都市計画法（昭和四十三年法律第百号）第二十条第一項の規定に基づき、特別区都市計画地区計画の変更を決定したので、同法第二十条第二項において準用する同法第十七条第一項の規定により、次のとおり告示する。
-    平成四十一年二月二十日
-    東京都知事　石原　慎太郎
-    １　都市計画の種類及び名称
-    特別区都市計画地区計画
-    ２　都市計画を定める土地の区域
-    東京都中央区日本橋本町四丁目地内
-    ３　都市計画の図書の縦覧場所
-    東京都都市整備局都市づくり政策部都市計画課`;
-
-    res.json({ kokujiText });
-  } catch (error) {
-    const { statusCode, message } = handleApiError(error, '告示文の取得に失敗しました');
-    res.status(statusCode).json({ error: message });
-  }
-});
-
 // 告示文取得APIエンドポイント
 app.get('/api/kokuji/:kokuji_id', async (req, res) => {
   try {
