@@ -18,10 +18,13 @@ import {
   Skeleton,
   TextField,
   MenuItem,
-  CircularProgress
+  CircularProgress,
+  Divider
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
+import MapIcon from '@mui/icons-material/Map';
 import LegalInfo from '../legal/LegalInfo';
 
 const ProjectDetail = () => {
@@ -41,24 +44,12 @@ const ProjectDetail = () => {
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        const response = await fetch(`/api/projects/${id}`);
+        const response = await fetch(`http://localhost:3001/api/v1/projects/${id}`);
         if (!response.ok) {
           throw new Error('プロジェクトの取得に失敗しました');
         }
-        const { project: projectData } = await response.json();
-        
-        try {
-          const legalResponse = await fetch(`/api/projects/${id}/legal`);
-          if (!legalResponse.ok) {
-            throw new Error('法令情報の取得に失敗しました');
-          }
-          const legalInfo = await legalResponse.json();
-          setProject({ ...projectData, legalInfo });
-        } catch (legalError) {
-          console.error('Legal info error:', legalError);
-          setProject(projectData);
-          setError(legalError.message);
-        }
+        const data = await response.json();
+        setProject(data);
       } catch (error) {
         console.error('Error:', error);
         setError(error.message);
@@ -72,7 +63,7 @@ const ProjectDetail = () => {
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(`/api/projects/${id}`, {
+      const response = await fetch(`http://localhost:3001/api/v1/projects/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
@@ -185,15 +176,17 @@ const ProjectDetail = () => {
 
   return (
     <Container maxWidth="lg">
-      <Box sx={{ p: { xs: 2, sm: 3 }, mt: { xs: 2, sm: 4 } }}>
-        <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
-          <Grid container spacing={2}>
+      <Box sx={{ py: 4 }}>
+        {/* プロジェクト基本情報 */}
+        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+          <Grid container spacing={3}>
             <Grid item xs={12}>
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                mb: 2
+                flexWrap: 'wrap',
+                gap: 2
               }}>
                 <Typography variant="h4" component="h1">
                   {project.name}
@@ -201,14 +194,42 @@ const ProjectDetail = () => {
                 <Chip
                   label={getStatusLabel(project.status)}
                   color={getStatusColor(project.status)}
+                  sx={{ fontSize: '1rem' }}
                 />
               </Box>
             </Grid>
+            
             <Grid item xs={12}>
-              <Typography variant="body1" paragraph>
-                {project.description}
+              <Divider />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                所在地
+              </Typography>
+              <Typography variant="body1">
+                {project.location || '未設定'}
               </Typography>
             </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                期間
+              </Typography>
+              <Typography variant="body1">
+                {project.start_date ? `${project.start_date} 〜 ${project.end_date || '未定'}` : '未設定'}
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                説明
+              </Typography>
+              <Typography variant="body1" paragraph>
+                {project.description || '説明はありません'}
+              </Typography>
+            </Grid>
+
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <Button
@@ -217,7 +238,7 @@ const ProjectDetail = () => {
                   startIcon={<EditIcon />}
                   onClick={() => navigate(`/projects/${id}/edit`)}
                 >
-                  プロジェクトを編集
+                  編集
                 </Button>
                 <Button
                   variant="outlined"
@@ -225,36 +246,84 @@ const ProjectDetail = () => {
                   startIcon={<DeleteIcon />}
                   onClick={() => setOpenDeleteDialog(true)}
                 >
-                  削除する
+                  削除
                 </Button>
               </Box>
             </Grid>
           </Grid>
         </Paper>
-        
-        <Paper elevation={2} sx={{ mt: 3, p: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" component="h2">
+
+        {/* 法令情報セクション */}
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            mb: 3
+          }}>
+            <Typography variant="h5" component="h2">
               法令情報
             </Typography>
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button
                 variant="outlined"
                 color="primary"
-                onClick={handleAddressSearch}
+                startIcon={<SearchIcon />}
+                onClick={() => navigate(`/map-search/${id}`)}
               >
-                住所から取得
+                用途地域検索
               </Button>
               <Button
                 variant="contained"
                 color="primary"
+                startIcon={<MapIcon />}
                 onClick={() => navigate(`/map-search/${id}`)}
               >
                 地図から検索
               </Button>
             </Box>
           </Box>
-          <LegalInfo legalInfo={project.legalInfo} />
+
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                用途地域
+              </Typography>
+              <Typography variant="body1">
+                未取得
+              </Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Divider />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                建ぺい率
+              </Typography>
+              <Typography variant="body1">
+                -
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                容積率
+              </Typography>
+              <Typography variant="body1">
+                -
+              </Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Divider />
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                高度地区
+              </Typography>
+              <Typography variant="body1">
+                -
+              </Typography>
+            </Grid>
+          </Grid>
         </Paper>
       </Box>
 
