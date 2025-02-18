@@ -345,17 +345,45 @@ const ZoneSearch = () => {
       setLandUseInfo(landUseData);
 
       try {
+        console.log('告示文取得開始:', { kokujiId: '412K500040001453' });
         const kokujiCacheKey = `kokuji_412K500040001453`;
         const kokujiData = await fetchWithCache(kokujiCacheKey, async () => {
-          const response = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`);
+          const response = await axios.get('http://localhost:3001/api/kokuji/412K500040001453', {
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+          console.log('告示文取得レスポンス:', {
+            status: response.status,
+            statusText: response.statusText,
+            data: response.data
+          });
           return response.data;
         });
 
-        if (kokujiData.status === 'success') {
+        if (kokujiData.status === 'success' && kokujiData.data?.kokuji_text) {
+          console.log('告示文取得成功:', {
+            textLength: kokujiData.data.kokuji_text?.length,
+            updatedAt: kokujiData.data.updated_at
+          });
           setKokujiText(kokujiData.data.kokuji_text);
+        } else {
+          console.warn('告示文取得失敗:', kokujiData);
+          setError('告示文の取得に失敗しました');
         }
       } catch (kokujiError) {
-        console.warn('告示文取得エラー:', kokujiError);
+        console.error('告示文取得エラー:', {
+          message: kokujiError.message,
+          status: kokujiError.response?.status,
+          statusText: kokujiError.response?.statusText,
+          data: kokujiError.response?.data
+        });
+        
+        const errorMessage = kokujiError.response?.status === 404
+          ? '指定された告示文が見つかりませんでした'
+          : '告示文の取得に失敗しました';
+        
+        setError(errorMessage);
       }
     } catch (error) {
       handleError(error, 'landuse', () => fetchLandUseInfo(location));

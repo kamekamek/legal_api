@@ -170,34 +170,41 @@ app.get('/api/landuse', async (req, res) => {
 app.get('/api/kokuji/:kokuji_id', async (req, res) => {
   try {
     const { kokuji_id } = req.params;
-    console.log('告示文取得リクエスト:', { 
-      kokuji_id,
-      url: `https://kokujiapi.azurewebsites.net/api/v1/getKokuji`,
+    console.log('告示文取得リクエスト開始:', { kokuji_id });
+
+    // APIリクエストの設定をログ出力
+    const apiConfig = {
+      url: 'https://kokujiapi.azurewebsites.net/api/v1/getKokuji',
       params: {
         kokuji_id,
         response_format: 'plain'
+      },
+      headers: {
+        'accept': 'application/xml'
       }
+    };
+    console.log('API設定:', apiConfig);
+
+    const response = await axios({
+      method: 'GET',
+      url: apiConfig.url,
+      params: apiConfig.params,
+      headers: apiConfig.headers,
+      timeout: 10000
     });
 
-    const response = await axios.get(
-      `https://kokujiapi.azurewebsites.net/api/v1/getKokuji`,
-      {
-        params: {
-          kokuji_id,
-          response_format: 'plain'
-        },
-        headers: {
-          'accept': 'application/xml',
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000 // 10秒でタイムアウト
-      }
-    );
+    console.log('告示文取得成功:', {
+      status: response.status,
+      contentType: response.headers['content-type'],
+      dataLength: response.data?.length
+    });
 
-    // <Law>タグを削除（前後の空白も含めて削除）
+    // レスポンスデータの整形
     let kokujiText = response.data;
-    kokujiText = kokujiText.replace(/^\s*<Law>\s*/g, '');  // 先頭の<Law>を削除
-    kokujiText = kokujiText.replace(/\s*<\/Law>\s*$/g, ''); // 末尾の</Law>を削除
+    if (typeof kokujiText === 'string') {
+      kokujiText = kokujiText.replace(/^\s*<Law>\s*/g, '');
+      kokujiText = kokujiText.replace(/\s*<\/Law>\s*$/g, '');
+    }
 
     res.json({
       status: 'success',
@@ -208,16 +215,26 @@ app.get('/api/kokuji/:kokuji_id', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('告示文取得エラー:', error);
-    res.status(error.response?.status || 500).json({ 
+    console.error('告示文取得エラー詳細:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      responseData: error.response?.data,
+      config: error.config
+    });
+
+    const statusCode = error.response?.status || 500;
+    const errorMessage = error.response?.status === 404 
+      ? '指定された告示文が見つかりませんでした'
+      : '告示文の取得に失敗しました';
+
+    res.status(statusCode).json({
       status: 'error',
-      message: '告示文の取得に失敗しました',
+      message: errorMessage,
       error: {
-        message: error.message,
         code: error.code,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
+        status: statusCode,
+        details: error.message
       }
     });
   }
