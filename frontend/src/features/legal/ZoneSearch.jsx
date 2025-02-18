@@ -291,10 +291,37 @@ const ZoneSearch = () => {
         
         setLandUseInfo(landUseResponse.data);
 
-        // 告示文の取得
-        const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`);
-        if (kokujiResponse.data.status === 'success') {
-          setKokujiText(kokujiResponse.data.data.kokuji_text);
+        try {
+          // 告示文の取得
+          console.log('告示文取得リクエスト開始:', {
+            url: `http://localhost:3001/api/kokuji/412K500040001453`
+          });
+
+          const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`, {
+            timeout: 10000,
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+
+          console.log('告示文取得レスポンス:', {
+            status: kokujiResponse.status,
+            statusText: kokujiResponse.statusText,
+            data: kokujiResponse.data
+          });
+
+          if (kokujiResponse.data.status === 'success') {
+            setKokujiText(kokujiResponse.data.data.kokuji_text);
+          } else {
+            console.warn('告示文取得警告:', kokujiResponse.data);
+          }
+        } catch (kokujiError) {
+          console.error('告示文取得エラー:', {
+            message: kokujiError.message,
+            response: kokujiError.response?.data,
+            status: kokujiError.response?.status
+          });
+          // 告示文の取得エラーは表示のみとし、メインの処理は継続
         }
       } catch (error) {
         console.error('Search error:', error);
