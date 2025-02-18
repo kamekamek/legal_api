@@ -15,7 +15,10 @@ import {
   useTheme,
   useMediaQuery,
   Grid,
-  Skeleton
+  Skeleton,
+  TextField,
+  MenuItem,
+  CircularProgress
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -32,23 +35,29 @@ const ProjectDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openLegalEditDialog, setOpenLegalEditDialog] = useState(false);
+  const [legalInfo, setLegalInfo] = useState(null);
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/v1/projects/${id}`);
+        const response = await fetch(`/api/projects/${id}`);
         if (!response.ok) {
           throw new Error('プロジェクトの取得に失敗しました');
         }
-        const data = await response.json();
+        const { project: projectData } = await response.json();
         
-        // 法令情報の取得
-        const legalResponse = await fetch(`http://localhost:3001/api/v1/legal/check?projectId=${id}`);
-        if (legalResponse.ok) {
-          const legalData = await legalResponse.json();
-          setProject({ ...data.project, ...legalData });
-        } else {
-          setProject(data.project);
+        try {
+          const legalResponse = await fetch(`/api/projects/${id}/legal`);
+          if (!legalResponse.ok) {
+            throw new Error('法令情報の取得に失敗しました');
+          }
+          const legalInfo = await legalResponse.json();
+          setProject({ ...projectData, legalInfo });
+        } catch (legalError) {
+          console.error('Legal info error:', legalError);
+          setProject(projectData);
+          setError(legalError.message);
         }
       } catch (error) {
         console.error('Error:', error);
@@ -63,7 +72,7 @@ const ProjectDetail = () => {
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/projects/${id}`, {
+      const response = await fetch(`/api/projects/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
@@ -71,10 +80,53 @@ const ProjectDetail = () => {
       }
       navigate('/projects');
     } catch (error) {
-      console.error('Error:', error);
       setError(error.message);
     }
     setOpenDeleteDialog(false);
+  };
+
+  const handleLegalInfoUpdate = async (updatedInfo) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/v1/legal/update/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedInfo),
+      });
+
+      if (!response.ok) {
+        throw new Error('法令情報の更新に失敗しました');
+      }
+
+      const updatedData = await response.json();
+      setLegalInfo(updatedData);
+      setProject(prev => ({ ...prev, legalInfo: updatedData }));
+      setOpenLegalEditDialog(false);
+    } catch (error) {
+      console.error('Error:', error);
+      setError(error.message || '法令情報の更新に失敗しました');
+    }
+  };
+
+  const handleAddressSearch = async () => {
+    if (!project?.location) {
+      setError('住所が設定されていません');
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/v1/legal/zone/info?address=${encodeURIComponent(project.location)}`);
+      if (!response.ok) {
+        throw new Error('用途地域情報の取得に失敗しました');
+      }
+
+      const zoneInfo = await response.json();
+      await handleLegalInfoUpdate(zoneInfo);
+    } catch (error) {
+      console.error('Error:', error);
+      setError(error.message || '用途地域情報の取得に失敗しました');
+    }
   };
 
   const getStatusColor = (status) => {
@@ -104,29 +156,14 @@ const ProjectDetail = () => {
   };
 
   if (loading) {
-    return (
-      <Container maxWidth="lg">
-        <Box sx={{ p: { xs: 2, sm: 3 }, mt: { xs: 2, sm: 4 } }}>
-          <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
-            <Skeleton variant="text" height={40} sx={{ mb: 2 }} />
-            <Skeleton variant="text" height={24} sx={{ mb: 1 }} />
-            <Skeleton variant="text" height={24} sx={{ mb: 1 }} />
-            <Skeleton variant="text" height={24} sx={{ mb: 2 }} />
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Skeleton variant="rectangular" width={100} height={36} />
-              <Skeleton variant="rectangular" width={100} height={36} />
-            </Box>
-          </Paper>
-        </Box>
-      </Container>
-    );
+    return <CircularProgress />;
   }
 
   if (error) {
     return (
-      <Container maxWidth="lg">
-        <Box sx={{ p: { xs: 2, sm: 3 }, mt: { xs: 2, sm: 4 } }}>
-          <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
+      <Container>
+        <Box sx={{ mt: 4 }}>
+          <Paper elevation={2} sx={{ p: 2 }}>
             <Typography color="error">{error}</Typography>
           </Paper>
         </Box>
@@ -154,88 +191,71 @@ const ProjectDetail = () => {
             <Grid item xs={12}>
               <Box sx={{ 
                 display: 'flex', 
-                flexDirection: { xs: 'column', sm: 'row' },
                 justifyContent: 'space-between',
-                alignItems: { xs: 'flex-start', sm: 'center' },
-                gap: { xs: 2, sm: 0 },
-                mb: 3
+                alignItems: 'center',
+                mb: 2
               }}>
-                <Typography 
-                  variant={isMobile ? "h5" : "h4"} 
-                  component="h1"
-                  sx={{ 
-                    wordBreak: 'break-word',
-                    mb: { xs: 1, sm: 0 }
-                  }}
-                >
+                <Typography variant="h4" component="h1">
                   {project.name}
                 </Typography>
                 <Chip
                   label={getStatusLabel(project.status)}
                   color={getStatusColor(project.status)}
-                  size={isMobile ? "small" : "medium"}
-                  sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}
                 />
               </Box>
             </Grid>
             <Grid item xs={12}>
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  mb: 3,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word'
-                }}
-              >
+              <Typography variant="body1" paragraph>
                 {project.description}
               </Typography>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                開始日
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                {new Date(project.startDate).toLocaleDateString()}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                終了日
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                {new Date(project.endDate).toLocaleDateString()}
-              </Typography>
-            </Grid>
             <Grid item xs={12}>
-              <Box sx={{ 
-                display: 'flex', 
-                gap: 2,
-                flexDirection: { xs: 'column', sm: 'row' },
-                mt: { xs: 2, sm: 3 }
-              }}>
+              <Box sx={{ display: 'flex', gap: 2 }}>
                 <Button
                   variant="contained"
+                  color="primary"
                   startIcon={<EditIcon />}
                   onClick={() => navigate(`/projects/${id}/edit`)}
-                  fullWidth={isMobile}
                 >
-                  編集
+                  プロジェクトを編集
                 </Button>
                 <Button
                   variant="outlined"
                   color="error"
                   startIcon={<DeleteIcon />}
                   onClick={() => setOpenDeleteDialog(true)}
-                  fullWidth={isMobile}
                 >
-                  削除
+                  削除する
                 </Button>
               </Box>
             </Grid>
           </Grid>
         </Paper>
-
-        <LegalInfo projectData={project} />
+        
+        <Paper elevation={2} sx={{ mt: 3, p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" component="h2">
+              法令情報
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={handleAddressSearch}
+              >
+                住所から取得
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => setOpenLegalEditDialog(true)}
+              >
+                法令情報を編集
+              </Button>
+            </Box>
+          </Box>
+          <LegalInfo legalInfo={project.legalInfo} />
+        </Paper>
       </Box>
 
       <Dialog
@@ -257,7 +277,58 @@ const ProjectDetail = () => {
             キャンセル
           </Button>
           <Button onClick={handleDelete} color="error" autoFocus>
-            削除
+            削除する
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={openLegalEditDialog}
+        onClose={() => setOpenLegalEditDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>法令情報の編集</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  select
+                  fullWidth
+                  label="用途地域"
+                  value={legalInfo?.zoneMap || ''}
+                  onChange={(e) => setLegalInfo(prev => ({ ...prev, zoneMap: e.target.value }))}
+                >
+                  <MenuItem value="第一種低層住居専用地域">第一種低層住居専用地域</MenuItem>
+                  <MenuItem value="第一種中高層住居専用地域">第一種中高層住居専用地域</MenuItem>
+                  <MenuItem value="第一種住居地域">第一種住居地域</MenuItem>
+                  <MenuItem value="近隣商業地域">近隣商業地域</MenuItem>
+                  <MenuItem value="商業地域">商業地域</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  select
+                  fullWidth
+                  label="高度地区"
+                  value={legalInfo?.heightDistrict || ''}
+                  onChange={(e) => setLegalInfo(prev => ({ ...prev, heightDistrict: e.target.value }))}
+                >
+                  <MenuItem value="第一種高度地区">第一種高度地区</MenuItem>
+                  <MenuItem value="第二種高度地区">第二種高度地区</MenuItem>
+                  <MenuItem value="第三種高度地区">第三種高度地区</MenuItem>
+                </TextField>
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenLegalEditDialog(false)}>
+            キャンセル
+          </Button>
+          <Button onClick={() => handleLegalInfoUpdate(legalInfo)} variant="contained">
+            保存
           </Button>
         </DialogActions>
       </Dialog>

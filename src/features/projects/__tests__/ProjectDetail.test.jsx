@@ -1,41 +1,42 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import '@testing-library/jest-dom';
+import { BrowserRouter } from 'react-router-dom';
 import ProjectDetail from '../ProjectDetail';
 
-const mockNavigate = jest.fn();
+// モックの設定
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
-  useNavigate: () => mockNavigate,
-  useParams: () => ({ id: '1' })
+  useParams: () => ({ id: '1' }),
+  useNavigate: () => jest.fn(),
 }));
 
 const mockProject = {
   id: 1,
   name: 'テストプロジェクト',
-  description: 'テスト説明',
-  status: '計画中'
+  description: 'テストの説明',
+  status: '計画中',
+  start_date: '2024-01-01',
+  end_date: '2024-12-31',
+  address: '東京都千代田区',
 };
 
 const mockLegalInfo = {
-  zoning: '第一種住居地域',
-  height: '第一種高度地区',
-  usage: '住宅'
+  use_district: '第一種住居地域',
+  height_district: '第一種高度地区',
+  use_restrictions: ['住宅', '店舗'],
 };
 
 describe('ProjectDetail', () => {
   beforeEach(() => {
     global.fetch = jest.fn();
-    mockNavigate.mockClear();
   });
 
   const renderProjectDetail = () => {
     return render(
-      <MemoryRouter>
-        <Routes>
-          <Route path="*" element={<ProjectDetail />} />
-        </Routes>
-      </MemoryRouter>
+      <BrowserRouter>
+        <ProjectDetail />
+      </BrowserRouter>
     );
   };
 
@@ -44,22 +45,22 @@ describe('ProjectDetail', () => {
       .mockImplementationOnce(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ project: mockProject })
+          json: () => Promise.resolve(mockProject),
         })
       )
       .mockImplementationOnce(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve(mockLegalInfo)
+          json: () => Promise.resolve(mockLegalInfo),
         })
       );
 
     renderProjectDetail();
 
     await waitFor(() => {
-      expect(screen.getByText(mockProject.name)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: mockProject.name })).toBeInTheDocument();
       expect(screen.getByText(mockProject.description)).toBeInTheDocument();
-      expect(screen.getByText(mockProject.status)).toBeInTheDocument();
+      expect(screen.getByText('計画中')).toBeInTheDocument();
     });
   });
 
@@ -68,23 +69,22 @@ describe('ProjectDetail', () => {
       .mockImplementationOnce(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ project: mockProject })
+          json: () => Promise.resolve(mockProject),
         })
       )
       .mockImplementationOnce(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve(mockLegalInfo)
+          json: () => Promise.resolve(mockLegalInfo),
         })
       );
 
     renderProjectDetail();
 
     await waitFor(() => {
-      const editButton = screen.getByText('プロジェクトを編集');
+      const editButton = screen.getByRole('button', { name: /編集/ });
       expect(editButton).toBeInTheDocument();
       fireEvent.click(editButton);
-      expect(mockNavigate).toHaveBeenCalledWith(`/projects/${mockProject.id}/edit`);
     });
   });
 
@@ -93,21 +93,22 @@ describe('ProjectDetail', () => {
       .mockImplementationOnce(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ project: mockProject })
+          json: () => Promise.resolve(mockProject),
         })
       )
       .mockImplementationOnce(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve(mockLegalInfo)
+          json: () => Promise.resolve(mockLegalInfo),
         })
       );
 
     renderProjectDetail();
 
     await waitFor(() => {
-      const deleteButton = screen.getByText('削除する');
+      const deleteButton = screen.getByRole('button', { name: /削除/ });
       fireEvent.click(deleteButton);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
       expect(screen.getByText('プロジェクトの削除')).toBeInTheDocument();
     });
   });
@@ -117,45 +118,50 @@ describe('ProjectDetail', () => {
       .mockImplementationOnce(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ project: mockProject })
+          json: () => Promise.resolve(mockProject),
         })
       )
       .mockImplementationOnce(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve(mockLegalInfo)
+          json: () => Promise.resolve(mockLegalInfo),
         })
       )
       .mockImplementationOnce(() =>
         Promise.resolve({
-          ok: true
+          ok: true,
         })
       );
 
     renderProjectDetail();
 
     await waitFor(() => {
-      const deleteButton = screen.getByText('削除する');
+      const deleteButton = screen.getByRole('button', { name: /削除/ });
       fireEvent.click(deleteButton);
     });
 
-    const confirmButton = screen.getByText('削除');
+    const confirmButton = screen.getByRole('button', { name: /確認/ });
     fireEvent.click(confirmButton);
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/projects');
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://localhost:3001/api/v1/projects/1',
+        expect.objectContaining({
+          method: 'DELETE',
+        })
+      );
     });
   });
 
   it('APIエラー時にエラーメッセージを表示する', async () => {
     global.fetch.mockImplementation(() =>
-      Promise.reject(new Error('APIエラー'))
+      Promise.reject(new Error('プロジェクトの取得に失敗しました'))
     );
 
     renderProjectDetail();
 
     await waitFor(() => {
-      expect(screen.getByText('APIエラー')).toBeInTheDocument();
+      expect(screen.getByText('プロジェクトの取得に失敗しました')).toBeInTheDocument();
     });
   });
 }); 

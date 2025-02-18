@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
+import { TextEncoder, TextDecoder } from 'util';
 
 // テスト後のクリーンアップ
 afterEach(() => {
@@ -13,4 +14,7 @@ global.matchMedia = global.matchMedia || function() {
     addListener: function() {},
     removeListener: function() {}
   };
-}; 
+};
+
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder; 
