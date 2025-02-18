@@ -119,36 +119,40 @@ app.get('/api/landuse', async (req, res) => {
       params: wmsParams,
       headers: {
         'x-api-key': ZENRIN_API_KEY,
-        'Authorization': 'referer',
-        'Referer': req.headers.referer || ''
       }
     });
 
     console.log('WMS Response:', response.data);
 
-    if (!response.data || !response.data.features || response.data.features.length === 0) {
-      return res.status(404).json({ error: '指定された地点の情報が見つかりませんでした' });
+    // レスポンスデータの解析
+    const features = response.data.features || [];
+    if (features.length > 0) {
+      const properties = features[0].properties;
+      // 用途地域コードから告示IDを取得
+      const kokujiId = properties.youto_code ? `412${properties.youto_code}` : null;
+      
+      res.json({
+        type: properties.youto_name || '不明',
+        code: properties.youto_code || '不明',
+        kokuji_id: kokujiId,
+        description: properties.description || '',
+        coordinates: {
+          lat: parseFloat(latStr),
+          lng: parseFloat(lngStr)
+        }
+      });
+    } else {
+      res.json({
+        type: '用途地域情報なし',
+        code: null,
+        kokuji_id: null,
+        description: '指定された地点の用途地域情報は見つかりませんでした。',
+        coordinates: {
+          lat: parseFloat(latStr),
+          lng: parseFloat(lngStr)
+        }
+      });
     }
-
-    // レスポンスデータの整形
-    const feature = response.data.features[0];
-    const properties = feature.properties;
-
-    const regulationData = {
-      type: properties.youto?.toString() || '情報なし',
-      fireArea: properties.bouka?.toString() || '情報なし',
-      buildingCoverageRatio: (properties.kenpei?.toString() || '60').replace(/%/g, ''),
-      floorAreaRatio: (properties.yoseki?.toString() || '200').replace(/%/g, ''),
-      heightDistrict: properties.koudo?.toString() || '0',
-      heightDistrict2: properties.koudo2?.toString() || '0',
-      zoneMap: properties.map?.toString() || '',
-      zoneMap2: properties.map2?.toString() || '',
-      buildingCoverageRatio2: properties.kenpei2?.toString() || '',
-      scenicZoneName: properties.f_meisho?.toString() || '',
-      scenicZoneType: properties.f_shu?.toString() || ''
-    };
-
-    res.json(regulationData);
   } catch (error) {
     console.error('API Error Details:', {
       message: error.message,
@@ -166,36 +170,81 @@ app.get('/api/landuse', async (req, res) => {
   }
 });
 
+// 告示文取得エンドポイント
+app.get('/api/kokuji/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // 固定の告示文を返す（実際のプロダクションでは、データベースやAPIから取得する）
+    const kokujiText = `東京都告示第千四百五十三号
+    都市計画法（昭和四十三年法律第百号）第二十条第一項の規定に基づき、特別区都市計画地区計画の変更を決定したので、同法第二十条第二項において準用する同法第十七条第一項の規定により、次のとおり告示する。
+    平成四十一年二月二十日
+    東京都知事　石原　慎太郎
+    １　都市計画の種類及び名称
+    特別区都市計画地区計画
+    ２　都市計画を定める土地の区域
+    東京都中央区日本橋本町四丁目地内
+    ３　都市計画の図書の縦覧場所
+    東京都都市整備局都市づくり政策部都市計画課`;
+
+    res.json({ kokujiText });
+  } catch (error) {
+    const { statusCode, message } = handleApiError(error, '告示文の取得に失敗しました');
+    res.status(statusCode).json({ error: message });
+  }
+});
+
 // 告示文取得APIエンドポイント
 app.get('/api/kokuji/:kokuji_id', async (req, res) => {
   try {
     const { kokuji_id } = req.params;
     console.log('告示文取得リクエスト開始:', { kokuji_id });
 
-    const response = await axios.get(
-      'https://kokujiapi.azurewebsites.net/api/v1/getKokuji',
-      {
-        params: {
-          kokuji_id: kokuji_id,
-          response_format: 'plain'
-        },
-        headers: {
-          'accept': 'application/xml'
-        }
-      }
-    );
+    const response = await axios({
+      method: 'GET',
+      url: 'https://kokujiapi.azurewebsites.net/api/v1/getKokuji',
+      params: {
+        kokuji_id: kokuji_id,
+        response_format: 'plain'
+      },
+      headers: {
+        'accept': 'application/xml'
+      },
+      timeout: 10000
+    });
+
+    console.log('Azure API Response:', {
+      status: response.status,
+      contentType: response.headers['content-type'],
+      dataLength: response.data?.length
+    });
 
     if (response.data) {
+      // XMLタグを除去（必要に応じて）
+      let kokujiText = response.data;
+      if (typeof kokujiText === 'string') {
+        kokujiText = kokujiText.replace(/^\s*<\?xml[^>]*\?>\s*/, '');
+        kokujiText = kokujiText.replace(/^\s*<Law>\s*/g, '');
+        kokujiText = kokujiText.replace(/\s*<\/Law>\s*$/g, '');
+      }
+
       res.json({
-        kokuji_text: response.data,
+        kokuji_text: kokujiText,
         updated_at: new Date().toISOString()
       });
     } else {
       res.status(404).json({ error: '告示文が見つかりませんでした' });
     }
   } catch (error) {
-    console.error('告示文取得エラー:', error);
-    res.status(error.response?.status || 500).json({
+    console.error('告示文取得エラー:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      config: error.config
+    });
+
+    const statusCode = error.response?.status || 500;
+    res.status(statusCode).json({
       error: '告示文の取得に失敗しました',
       details: error.response?.data || error.message
     });
