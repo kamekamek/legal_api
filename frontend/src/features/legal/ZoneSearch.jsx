@@ -420,8 +420,10 @@ const ZoneSearch = () => {
     if (!mapInstanceRef.current) return;
 
     const map = mapInstanceRef.current;
+    console.log('Map instance:', map); // デバッグログ追加
     
     const setYouto = () => {
+      console.log('setYouto called, youtoVisible:', youtoVisible); // デバッグログ追加
       const map = mapInstanceRef.current;
       
       // バルーンを削除
@@ -439,9 +441,11 @@ const ZoneSearch = () => {
       const size = map.getMapSize();
       const zoom = map.getZoom();
       setCurrentZoom(zoom);
+      console.log('Current zoom level:', zoom); // デバッグログ追加
 
       // ズームレベルが15未満の場合は表示しない
       if (zoom < 15) {
+        console.log('Zoom level too low, not displaying youto'); // デバッグログ追加
         return;
       }
 
@@ -456,6 +460,7 @@ const ZoneSearch = () => {
         'FORMAT': 'image/png',
         'INFO_FORMAT': 'application/json'
       };
+      console.log('WMS request data:', data); // デバッグログ追加
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', 'https://test-web.zmaps-api.com/map/wms/youto');
@@ -465,6 +470,7 @@ const ZoneSearch = () => {
       xhr.responseType = 'blob';
       
       xhr.onload = function() {
+        console.log('WMS response status:', this.status); // デバッグログ追加
         if (this.status === 200) {
           const widget = new window.ZDC.UserWidget(
             map.getLatLngBounds().getNorthWest(),
@@ -479,77 +485,24 @@ const ZoneSearch = () => {
           const url = window.URL || window.webkitURL;
           const img = document.getElementById("youto");
           img.src = url.createObjectURL(this.response);
+          console.log('Youto overlay added successfully'); // デバッグログ追加
         }
       };
       xhr.send(encodeData(data));
     };
 
-    const getFeatureInfo = (ev) => {
-      const zoom = map.getZoom();
-      // ズームレベルが15未満の場合は情報を表示しない
-      if (zoom < 15) {
-        return;
-      }
-
-      const size = map.getMapSize();
-      const data = {
-        'VERSION': '1.3.0',
-        'REQUEST': 'GetFeatureInfo',
-        'LAYERS': zoom >= 17 ? 'lp1,ll1' : 'lp1',
-        'QUERY_LAYERS': zoom >= 17 ? 'lp1,ll1' : 'lp1',
-        'CRS': 'EPSG:3857',
-        'BBOX': getBBOX(map),
-        'WIDTH': size.width,
-        'HEIGHT': size.height,
-        'FORMAT': 'image/png',
-        'INFO_FORMAT': 'application/json',
-        'FEATURE_COUNT': 1,
-        'I': ev.point.x,
-        'J': ev.point.y,
-      };
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'https://test-web.zmaps-api.com/map/wms/youto');
-      xhr.setRequestHeader('x-api-key', import.meta.env.VITE_ZENRIN_API_KEY);
-      xhr.setRequestHeader('Authorization', 'referer');
-      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-      xhr.responseType = 'json';
-      
-      xhr.onload = function() {
-        if (this.status === 200 && this.response && this.response.features && this.response.features.length > 0) {
-          if (balloon) {
-            map.removeWidget(balloon);
-          }
-
-          const feature = this.response.features[0];
-          if (feature.properties) {
-            const newBalloon = new window.ZDC.UserWidget(
-              new window.ZDC.LatLng(ev.latlng.lat, ev.latlng.lng),
-              {
-                htmlSource: `<div class="balloon"><p>${feature.properties.map || ''} ${feature.properties.koudo || ''}</p></div>`,
-                propagation: true
-              }
-            );
-            map.addWidget(newBalloon);
-            setBalloon(newBalloon);
-          }
-        }
-      };
-
-      xhr.onerror = function() {
-        console.error('用途地域情報の取得に失敗しました');
-      };
-
-      xhr.send(encodeData(data));
-    };
-
-    map.bind('idle', () => {
+    // イベントリスナーの設定
+    console.log('Setting up event listeners'); // デバッグログ追加
+    
+    const handleIdle = () => {
+      console.log('Idle event triggered, youtoVisible:', youtoVisible); // デバッグログ追加
       if (youtoVisible) {
         setYouto();
       }
-    });
+    };
 
-    map.bind('click', async (e) => {
+    const handleClick = async (e) => {
+      console.log('Click event triggered at:', e.latlng); // デバッグログ追加
       try {
         if (markerRef.current) {
           map.removeWidget(markerRef.current);
@@ -567,6 +520,7 @@ const ZoneSearch = () => {
             lng: lng
           }
         });
+        console.log('Land use response:', landUseResponse.data); // デバッグログ追加
 
         setLandUseInfo(landUseResponse.data);
 
@@ -575,6 +529,7 @@ const ZoneSearch = () => {
           const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`);
           if (kokujiResponse.data.status === 'success') {
             setKokujiText(kokujiResponse.data.data.kokuji_text);
+            console.log('Kokuji text retrieved successfully'); // デバッグログ追加
           }
         } catch (kokujiError) {
           console.warn('告示文取得エラー:', kokujiError);
@@ -583,11 +538,15 @@ const ZoneSearch = () => {
         console.error('Search error:', error);
         setError('検索中にエラーが発生しました。' + (error.message || ''));
       }
-    });
+    };
+
+    map.addEventListener('idle', handleIdle);
+    map.addEventListener('click', handleClick);
 
     return () => {
-      map.unbind('idle');
-      map.unbind('click');
+      console.log('Cleaning up event listeners'); // デバッグログ追加
+      map.removeEventListener('idle', handleIdle);
+      map.removeEventListener('click', handleClick);
     };
   }, [youtoVisible, balloon]);
 
