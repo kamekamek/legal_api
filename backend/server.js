@@ -12,7 +12,7 @@ const ZENRIN_WMS_URL = 'https://test-web.zmaps-api.com/map/wms/youto';
 const ZENRIN_GEOCODE_URL = 'https://test-web.zmaps-api.com/geocode';
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN,
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   credentials: true
 }));
 app.use(express.json());
@@ -52,7 +52,7 @@ app.post('/api/legal/address/search', async (req, res) => {
     const [lng, lat] = location;
 
     // 用途地域情報を取得
-    const landUseResponse = await axios.get(`${process.env.CORS_ORIGIN}/api/landuse`, {
+    const landUseResponse = await axios.get(`${req.protocol}://${req.get('host')}/api/landuse`, {
       params: { lat, lng }
     });
 
@@ -211,6 +211,11 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'サーバーエラーが発生しました' });
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+module.exports = app;
+
+// サーバー起動（テスト時は起動しない）
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+}
