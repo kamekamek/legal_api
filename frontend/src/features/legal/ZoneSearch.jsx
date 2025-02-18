@@ -343,10 +343,9 @@ const ZoneSearch = () => {
         
         // 固定の告示ID「412K500040001453」で告示文を取得する
         try {
-          const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`);
-          if (kokujiResponse.data && kokujiResponse.data.kokuji_text) {
-            setKokujiText(kokujiResponse.data.kokuji_text);
-          }
+          const kokujiId = '412K500040001453';
+          console.log('告示文取得開始:', { kokujiId });
+          await fetchKokujiText(kokujiId);
         } catch (error) {
           console.error('告示文取得エラー:', error);
           setError('告示文の取得に失敗しました');
@@ -355,6 +354,46 @@ const ZoneSearch = () => {
     } catch (error) {
       console.error('用途地域情報取得エラー:', error);
       setError('用途地域情報の取得に失敗しました');
+    }
+  };
+
+  const fetchKokujiText = async (kokujiId) => {
+    try {
+      console.log('告示文取得開始:', { kokujiId });
+      
+      // kokuji_idの形式を確認
+      if (!kokujiId.match(/^412[A-Z][0-9]{12}$/)) {
+        console.error('不正な告示ID形式:', kokujiId);
+        setKokujiText('告示IDの形式が不正です');
+        return;
+      }
+
+      const response = await axios.get(`http://localhost:3001/api/kokuji/${kokujiId}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('告示文取得レスポンス:', response.data);
+      
+      if (response.data.status === 'success' && response.data.data?.kokuji_text) {
+        setKokujiText(response.data.data.kokuji_text);
+      } else {
+        console.warn('告示文データが不正:', response.data);
+        setKokujiText(response.data.error || '告示文の取得に失敗しました');
+      }
+    } catch (error) {
+      console.error('告示文取得エラー:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
+
+      const errorMessage = error.response?.data?.error || '告示文の取得に失敗しました';
+      setKokujiText(errorMessage);
+      setError(errorMessage);
     }
   };
 
@@ -524,11 +563,7 @@ const ZoneSearch = () => {
         try {
           const kokujiId = '412K500040001453';
           console.log('告示文取得開始:', { kokuji_id: kokujiId });
-          const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/${kokujiId}`);
-          if (kokujiResponse.data && kokujiResponse.data.kokuji_text) {
-            setKokujiText(kokujiResponse.data.kokuji_text);
-            console.log('Kokuji text retrieved successfully');
-          }
+          await fetchKokujiText(kokujiId);
         } catch (kokujiError) {
           console.warn('告示文取得エラー:', kokujiError);
           setError('告示文の取得に失敗しました。');
@@ -572,15 +607,26 @@ const ZoneSearch = () => {
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
     if (mapInstanceRef.current) {
+      // 地図のサイズを再計算（要素のマウント完了を待つ）
       setTimeout(() => {
         const map = mapInstanceRef.current;
         const container = mapRef.current;
-        if (container) {
-          container.style.width = '100%';
-          container.style.height = '100%';
-          map.refreshSize();
+        if (container && map) {
+          try {
+            // コンテナのスタイルを更新
+            container.style.width = '100%';
+            container.style.height = '100%';
+            // 地図を更新（エラーハンドリング追加）
+            if (typeof map.refreshSize === 'function') {
+              map.refreshSize();
+            } else {
+              console.warn('map.refreshSize is not available');
+            }
+          } catch (error) {
+            console.error('Map refresh error:', error);
+          }
         }
-      }, 100);
+      }, 200); // タイミングを少し遅らせる
     }
   };
 

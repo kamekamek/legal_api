@@ -174,7 +174,11 @@ app.get('/api/landuse', async (req, res) => {
 app.get('/api/kokuji/:kokuji_id', async (req, res) => {
   try {
     const { kokuji_id } = req.params;
-    console.log('告示文取得リクエスト開始:', { kokuji_id });
+    console.log('告示文取得リクエスト開始:', { 
+      kokuji_id,
+      request_headers: req.headers,
+      request_url: req.originalUrl
+    });
 
     const response = await axios({
       method: 'GET',
@@ -184,7 +188,8 @@ app.get('/api/kokuji/:kokuji_id', async (req, res) => {
         response_format: 'plain'
       },
       headers: {
-        'accept': 'application/xml'
+        'accept': 'application/xml',
+        'Content-Type': 'application/json'
       },
       timeout: 10000
     });
@@ -192,7 +197,8 @@ app.get('/api/kokuji/:kokuji_id', async (req, res) => {
     console.log('Azure API Response:', {
       status: response.status,
       contentType: response.headers['content-type'],
-      dataLength: response.data?.length
+      dataLength: response.data?.length,
+      responseData: response.data
     });
 
     if (response.data) {
@@ -205,25 +211,58 @@ app.get('/api/kokuji/:kokuji_id', async (req, res) => {
       }
 
       res.json({
-        kokuji_text: kokujiText,
-        updated_at: new Date().toISOString()
+        status: 'success',
+        data: {
+          kokuji_text: kokujiText,
+          kokuji_id: kokuji_id,
+          updated_at: new Date().toISOString()
+        }
       });
     } else {
-      res.status(404).json({ error: '告示文が見つかりませんでした' });
+      res.status(404).json({ 
+        status: 'error',
+        error: '告示文が見つかりませんでした',
+        kokuji_id
+      });
     }
   } catch (error) {
     console.error('告示文取得エラー:', {
       message: error.message,
       status: error.response?.status,
       data: error.response?.data,
-      config: error.config
+      config: {
+        url: error.config?.url,
+        params: error.config?.params,
+        headers: error.config?.headers
+      },
+      stack: error.stack
     });
 
-    const statusCode = error.response?.status || 500;
-    res.status(statusCode).json({
-      error: '告示文の取得に失敗しました',
-      details: error.response?.data || error.message
-    });
+    // エラーレスポンスの詳細を確認
+    if (error.response) {
+      // Azure APIからのエラーレスポンス
+      res.status(error.response.status).json({
+        status: 'error',
+        error: '告示文の取得に失敗しました',
+        details: error.response.data,
+        kokuji_id
+      });
+    } else if (error.request) {
+      // リクエストは送信されたがレスポンスが受信できない
+      res.status(503).json({
+        status: 'error',
+        error: 'Azure APIからの応答がありません',
+        kokuji_id
+      });
+    } else {
+      // リクエストの作成中にエラーが発生
+      res.status(500).json({
+        status: 'error',
+        error: 'サーバー内部エラー',
+        details: error.message,
+        kokuji_id
+      });
+    }
   }
 });
 
