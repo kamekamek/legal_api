@@ -1,0 +1,128 @@
+# Legal API Project Rules
+
+## プロジェクト構造
+```
+legal_api/
+├── frontend/              # Reactフロントエンド
+│   ├── src/
+│   │   ├── features/     # 機能モジュール
+│   │   ├── components/   # 共通コンポーネント
+│   │   ├── services/     # APIサービス
+│   │   ├── pages/        # ページコンポーネント
+│   │   ├── hooks/        # カスタムフック
+│   │   ├── config/       # 設定ファイル
+│   │   ├── constants/    # 定数定義
+│   │   ├── assets/       # 静的ファイル
+│   │   ├── tests/        # テストファイル
+│   │   └── utils/        # ユーティリティ関数
+│   ├── public/           # 静的ファイル
+│   └── docs/             # フロントエンド関連ドキュメント
+├── backend/              # Expressバックエンド
+│   ├── src/             # ソースコード
+│   ├── config/          # 設定ファイル
+│   ├── scripts/         # ユーティリティスクリプト
+│   ├── tests/           # ユニットテスト
+│   └── e2e/             # E2Eテスト
+├── docs/                # プロジェクト全体のドキュメント
+│   └── archive/         # 過去のドキュメント
+├── scripts/             # プロジェクト全体のスクリプト
+├── .github/             # GitHub関連設定
+└── src/                 # 共通ソースコード
+```
+
+## ドキュメント参照
+- プロジェクト全体の状況: `docs/project-status.md`
+- API仕様: `docs/api-spec.md`
+- フロントエンドガイド: `frontend/docs/`
+- バックエンドガイド: `backend/docs/`
+
+## コーディング規約
+
+### 全般
+- インデント: 2スペース
+- 文字コード: UTF-8
+- 改行コード: LF
+- ファイル末尾: 空行1行
+
+### フロントエンド（React）
+- コンポーネント命名: PascalCase
+- ファイル命名: 
+  - コンポーネント: `.jsx`
+  - その他: `.js`
+- スタイル: CSS Modules（`.module.css`）
+- テスト: `.test.jsx` or `.test.js`
+- 機能モジュール構造:
+  ```
+  features/
+  └── 機能名/
+      ├── components/     # 機能固有のコンポーネント
+      ├── hooks/         # 機能固有のフック
+      ├── services/      # API通信
+      └── utils/         # ユーティリティ
+  ```
+
+### バックエンド（Express）
+- ファイル命名: snake_case
+- APIエンドポイント: kebab-case
+- テストファイル: `*.test.js`
+- 環境設定:
+  - 開発: `.env`
+  - テスト: `.env.test`
+
+## Cursor設定
+
+### コンテキスト優先度
+1. `docs/project-status.md` - プロジェクト全体の状況
+2. 各機能のドキュメント（`docs/archive/`）
+3. 実装コード
+4. テストコード
+
+### 自動補完設定
+- React Hooks
+- Express middleware
+- Material-UI components
+- Testing Library
+- TypeScript型定義
+
+### コード生成ルール
+- コンポーネントテンプレート
+  - Propsの型定義
+  - エラーハンドリング
+  - テストファイル
+- APIエンドポイント
+  - バリデーション
+  - エラーレスポンス
+  - OpenAPI仕様
+- 機能モジュール
+  - index.jsエクスポート
+  - 型定義ファイル
+
+### リンター・フォーマッター
+- ESLint
+- Prettier
+- TypeScript（`.ts`, `.tsx`）
+
+## Git運用
+- ブランチ命名規則:
+  - 機能開発: `feature/機能名`
+  - バグ修正: `fix/issue番号`
+  - リファクタリング: `refactor/対象`
+- コミットメッセージ形式:
+  ```
+  type(scope): 内容
+
+  詳細な説明（必要な場合）
+  ```
+  - type: feat, fix, docs, style, refactor, test, chore
+  - scope: frontend, backend, docs, etc.
+
+## 注意事項
+- APIキーなどの機密情報は`.env`ファイルで管理
+- 新機能の追加時は`docs/project-status.md`を更新
+- テストカバレッジ目標: 80%以上
+- パフォーマンス基準:
+  - ページロード: 3秒以内
+  - APIレスポンス: 1秒以内
+- 依存関係の更新:
+  - パッケージの更新は定期的に実施
+  - メジャーバージョンの更新は慎重に検討
