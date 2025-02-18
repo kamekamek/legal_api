@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   TextField,
   IconButton,
@@ -9,12 +10,15 @@ import {
   Button,
   Dialog,
   DialogTitle,
-  DialogContent
+  DialogContent,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import CloseIcon from '@mui/icons-material/Close';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import axios from 'axios';
 import {
   YOUTO_MAPPING,
@@ -70,6 +74,8 @@ const KokujiDialog = ({ open, onClose, kokujiText }) => {
 };
 
 const ZoneSearch = () => {
+  const { projectId } = useParams();
+  const navigate = useNavigate();
   const [address, setAddress] = useState('');
   const [location, setLocation] = useState(null);
   const [landUseInfo, setLandUseInfo] = useState(null);
@@ -79,6 +85,7 @@ const ZoneSearch = () => {
   const [currentZoom, setCurrentZoom] = useState(17);
   const [kokujiText, setKokujiText] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
@@ -450,6 +457,45 @@ const ZoneSearch = () => {
     }
   };
 
+  const handleSaveToProject = async () => {
+    if (!landUseInfo || !projectId) return;
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/v1/projects/${projectId}/legal-info`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(landUseInfo),
+      });
+
+      if (!response.ok) {
+        throw new Error('法令情報の更新に失敗しました');
+      }
+
+      setSnackbar({
+        open: true,
+        message: 'プロジェクトに法令情報を保存しました',
+        severity: 'success'
+      });
+
+      // 3秒後にプロジェクト詳細画面に戻る
+      setTimeout(() => {
+        navigate(`/projects/${projectId}`);
+      }, 3000);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: error.message || '法令情報の保存に失敗しました',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
   const InfoRow = ({ label, value }) => {
     return (
       <Box sx={{ 
@@ -492,48 +538,53 @@ const ZoneSearch = () => {
   };
 
   return (
-    <Box sx={{ 
-      bgcolor: 'white',
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center'
-    }}>
-      <Container 
-        sx={{ 
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          width: '100%',
-          maxWidth: isFullscreen ? '100% !important' : '800px !important',
-          p: isFullscreen ? 0 : 2
-        }}
-      >
+    <Container maxWidth="xl" sx={{ height: '100vh', p: 0 }}>
+      <Box sx={{ 
+        position: 'relative', 
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        {/* ヘッダー部分 */}
         <Box sx={{ 
-          display: 'flex',
-          flexDirection: 'column',
-          width: '100%',
-          ...(isFullscreen ? {
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 1000,
-            bgcolor: 'white'
-          } : {})
+          p: 2, 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          bgcolor: 'background.paper',
+          borderBottom: 1,
+          borderColor: 'divider'
         }}>
-          {!isFullscreen && (
-            <>
-              <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold' }}>
-                用途地域検索
-              </Typography>
-              <Typography variant="subtitle1" align="center" color="text.secondary" sx={{ mb: 3 }}>
-                住所を入力して地図と用途地域情報を確認できます
-              </Typography>
-            </>
-          )}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton 
+              onClick={() => navigate(`/projects/${projectId}`)}
+              aria-label="戻る"
+            >
+              <ArrowBackIcon />
+            </IconButton>
+            <Typography variant="h6">用途地域検索</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            {landUseInfo && projectId && (
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSaveToProject}
+              >
+                プロジェクトに保存
+              </Button>
+            )}
+            <IconButton
+              onClick={toggleFullscreen}
+              aria-label={isFullscreen ? '全画面解除' : '全画面表示'}
+            >
+              {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+            </IconButton>
+          </Box>
+        </Box>
 
+        {/* 既存のマップコンテンツ */}
+        <Box sx={{ flex: 1, position: 'relative' }}>
           <Box sx={{ 
             width: '100%',
             position: 'relative',
@@ -638,96 +689,7 @@ const ZoneSearch = () => {
                 </Box>
               </Box>
             )}
-
-            <IconButton
-              onClick={toggleFullscreen}
-              sx={{
-                position: 'absolute',
-                top: 16,
-                right: 60,
-                bgcolor: 'white',
-                '&:hover': {
-                  bgcolor: 'rgba(255, 255, 255, 0.8)'
-                },
-                zIndex: 1
-              }}
-            >
-              {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
-            </IconButton>
           </Box>
-
-          {!isFullscreen && (
-            <>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center',
-                width: '100%',
-                maxWidth: 600,
-                mx: 'auto',
-                bgcolor: 'white',
-                borderRadius: 2,
-                overflow: 'hidden',
-                boxShadow: 1,
-                mb: 4
-              }}>
-                <TextField
-                  fullWidth
-                  placeholder="住所を入力（例：東京都千代田区丸の内1丁目）"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  sx={{ 
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': { border: 'none' },
-                    },
-                    '& .MuiInputBase-input': {
-                      p: 2,
-                    }
-                  }}
-                />
-                <IconButton 
-                  onClick={handleSearch}
-                  sx={{ 
-                    bgcolor: '#1a237e',
-                    borderRadius: 1,
-                    color: 'white',
-                    m: 1,
-                    '&:hover': {
-                      bgcolor: '#000051'
-                    }
-                  }}
-                >
-                  <SearchIcon />
-                </IconButton>
-              </Box>
-
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center',
-                width: '100%',
-                maxWidth: 600,
-                mx: 'auto',
-                bgcolor: 'white',
-                borderRadius: 2,
-                overflow: 'hidden',
-                boxShadow: 1,
-                mb: 4
-              }}>
-                <div className="form-check form-switch form-switch-custom py-1">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id="youtoSwitch"
-                    checked={youtoVisible}
-                    onChange={(e) => setYoutoVisible(e.target.checked)}
-                    disabled={currentZoom < 15}
-                  />
-                  <label className="form-check-label" htmlFor="youtoSwitch">
-                    用途地域 {currentZoom < 15 && '(ズームインしてください)'}
-                  </label>
-                </div>
-              </Box>
-            </>
-          )}
 
           {error && (
             <Typography color="error" align="center" sx={{ mb: 2 }}>
@@ -819,13 +781,25 @@ const ZoneSearch = () => {
             </Paper>
           )}
         </Box>
-      </Container>
+      </Box>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
       <KokujiDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         kokujiText={kokujiText}
       />
-    </Box>
+    </Container>
   );
 };
 

@@ -248,9 +248,9 @@ const ProjectDetail = () => {
               <Button
                 variant="contained"
                 color="primary"
-                onClick={() => setOpenLegalEditDialog(true)}
+                onClick={() => navigate(`/map-search/${id}`)}
               >
-                法令情報を編集
+                地図から検索
               </Button>
             </Box>
           </Box>
