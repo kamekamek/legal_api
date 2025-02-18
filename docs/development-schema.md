@@ -219,7 +219,8 @@ sequenceDiagram
 erDiagram
     Project ||--o{ LegalDocument : contains
     LegalDocument ||--o{ ZoneInfo : has
-    LegalDocument ||--o{ KokujiInfo : references
+    LegalDocument ||--o{ BuildingRestriction : includes
+    LegalDocument ||--o{ Regulation : contains
     
     LegalDocument {
         int id PK
@@ -235,24 +236,94 @@ erDiagram
         int id PK
         int legal_document_id FK
         string zone_type
-        json regulations
+        string fire_prevention
         float coverage_ratio
         float floor_area_ratio
-        json height_restrictions
+        float building_area
+        float total_floor_area
+        string height_district
+        string area_classification
+        string scenic_district
         timestamp created_at
     }
     
-    KokujiInfo {
+    BuildingRestriction {
         int id PK
         int legal_document_id FK
-        string kokuji_id
-        text kokuji_text
+        string law_article_48
+        json allowed_uses
+        string law_appendix_2_category
+        json restrictions
+        timestamp created_at
+    }
+    
+    Regulation {
+        int id PK
+        int legal_document_id FK
+        string notification_id
+        text notification_content
         date effective_date
+        text safety_ordinance_articles
+        text safety_ordinance_content
         timestamp created_at
     }
 ```
 
-### 5.2 API設計
+### 5.2 データベース定義
+
+```sql
+-- 法令文書
+CREATE TABLE legal_documents (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id),
+    location TEXT NOT NULL,
+    latitude FLOAT NOT NULL,
+    longitude FLOAT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 用途地域情報
+CREATE TABLE zone_info (
+    id SERIAL PRIMARY KEY,
+    legal_document_id INTEGER REFERENCES legal_documents(id),
+    zone_type VARCHAR(100) NOT NULL,
+    fire_prevention VARCHAR(100) NOT NULL,
+    coverage_ratio FLOAT,
+    floor_area_ratio FLOAT,
+    building_area FLOAT,
+    total_floor_area FLOAT,
+    height_district VARCHAR(100),
+    area_classification VARCHAR(100),
+    scenic_district VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 建築制限情報
+CREATE TABLE building_restrictions (
+    id SERIAL PRIMARY KEY,
+    legal_document_id INTEGER REFERENCES legal_documents(id),
+    law_article_48 VARCHAR(100),
+    allowed_uses JSONB,
+    law_appendix_2_category VARCHAR(100),
+    restrictions JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 条例・告示情報
+CREATE TABLE regulations (
+    id SERIAL PRIMARY KEY,
+    legal_document_id INTEGER REFERENCES legal_documents(id),
+    notification_id VARCHAR(100),
+    notification_content TEXT,
+    effective_date DATE,
+    safety_ordinance_articles TEXT[],
+    safety_ordinance_content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### 5.3 API設計
 
 ```mermaid
 sequenceDiagram
@@ -263,46 +334,61 @@ sequenceDiagram
     C->>A: 法令情報保存リクエスト
     Note right of C: POST /api/v1/projects/:id/legal-docs
     
-    A->>DB: プロジェクト存在確認
-    DB-->>A: プロジェクト情報
-    
-    A->>DB: 法令情報保存
-    Note right of A: トランザクション開始
+    A->>DB: トランザクション開始
+    A->>DB: 法令文書保存
     A->>DB: 用途地域情報保存
-    A->>DB: 告示情報保存
+    A->>DB: 建築制限情報保存
+    A->>DB: 条例・告示情報保存
     Note right of A: トランザクション終了
     
     DB-->>A: 保存完了
     A-->>C: 保存完了レスポンス
 ```
 
-### 5.3 保存データ構造
+### 5.4 保存データ例
 
 ```json
 {
-  "location": "東京都千代田区丸の内1-1-1",
-  "coordinates": {
-    "latitude": 35.681236,
-    "longitude": 139.767125
-  },
-  "zoneInfo": {
-    "zone_type": "商業地域",
-    "regulations": {
-      "coverage_ratio": 80,
-      "floor_area_ratio": 400,
-      "height_restrictions": {
-        "absolute_max": 60,
-        "gradient_restrictions": []
-      }
+  "location": {
+    "address": "東京都千代田区丸の内1-1-1",
+    "coordinates": {
+      "latitude": 35.681236,
+      "longitude": 139.767125
     }
   },
-  "kokujiInfo": {
-    "kokuji_id": "412K500040001453",
-    "kokuji_text": "...",
-    "effective_date": "2024-01-01"
+  "zoning_info": {
+    "zone_type": "商業地域",
+    "fire_prevention": "防火地域",
+    "coverage_ratio": 80,
+    "floor_area_ratio": 400,
+    "building_area": 800,
+    "total_floor_area": 3200,
+    "height_district": "第三種高度地区",
+    "area_classification": "市街化区域",
+    "scenic_district": null
+  },
+  "building_restrictions": {
+    "building_standard_law_48": {
+      "allowed_uses": ["事務所", "店舗", "共同住宅"],
+      "restrictions": []
+    },
+    "law_appendix_2": {
+      "category": "第二種",
+      "restrictions": []
+    }
+  },
+  "regulations": {
+    "notifications": [{
+      "notification_id": "412K500040001453",
+      "content": "...",
+      "effective_date": "2024-01-01"
+    }],
+    "tokyo_building_safety": {
+      "article_numbers": ["第30条", "第31条"],
+      "content": "..."
+    }
   }
 }
-
 ```
 
 ## 6. プロジェクト詳細画面
@@ -326,10 +412,22 @@ graph TD
     end
     
     subgraph "法令情報セクション"
-        C --> L[用途地域情報]
-        C --> M[建ぺい率]
-        C --> N[容積率]
-        C --> O[高度地区]
+        C --> L[所在地情報]
+        C --> M[用途地域情報]
+        M --> M1[用途地域]
+        M --> M2[防火地域]
+        M --> M3[建蔽率・容積率]
+        M --> M4[建築面積]
+        M --> M5[延べ床面積]
+        M --> M6[高度地区]
+        M --> M7[区域区分]
+        M --> M8[風致地区]
+        C --> N[建築制限情報]
+        N --> N1[建築基準法48条]
+        N --> N2[法別表第2]
+        C --> O[条例・告示情報]
+        O --> O1[告示一覧]
+        O --> O2[建築安全条例]
         C --> P[操作ボタン]
         P --> Q[用途地域検索]
         P --> R[地図から検索]
@@ -344,21 +442,28 @@ graph TD
     A --> C[MapViewer]
     
     subgraph "法令情報編集"
-        B --> D[RegulationEditor]
-        B --> E[KokujiEditor]
+        B --> D[LocationEditor]
+        B --> E[ZoningInfoEditor]
+        B --> F[BuildingRestrictionsEditor]
+        B --> G[RegulationsEditor]
         
-        D --> F[ZoneTypeSelect]
-        D --> G[RatioInputs]
-        D --> H[HeightRestrictionInputs]
+        E --> E1[ZoneTypeSelect]
+        E --> E2[FirePreventionSelect]
+        E --> E3[RatioInputs]
+        E --> E4[DistrictInputs]
         
-        E --> I[KokujiTextArea]
-        E --> J[EffectiveDatePicker]
+        F --> F1[Law48Editor]
+        F --> F2[LawAppendixEditor]
+        
+        G --> G1[NotificationEditor]
+        G --> G2[SafetyOrdinanceEditor]
     end
     
     subgraph "地図表示"
-        C --> K[ZoneOverlay]
-        C --> L[LocationMarker]
-        C --> M[MapControls]
+        C --> H[ZenrinMap]
+        C --> I[ZoneOverlay]
+        C --> J[LocationMarker]
+        C --> K[MapControls]
     end
 ```
 
@@ -369,16 +474,17 @@ stateDiagram-v2
     [*] --> プロジェクト詳細表示
     プロジェクト詳細表示 --> 基本情報編集: 編集ボタン
     プロジェクト詳細表示 --> 削除確認: 削除ボタン
-    プロジェクト詳細表示 --> 地図検索: 地図から検索
-    プロジェクト詳細表示 --> 用途地域検索: 用途地域検索
+    プロジェクト詳細表示 --> 用途地域検索: 用途地域検索ボタン
+    プロジェクト詳細表示 --> 地図検索: 地図から検索ボタン
     
     基本情報編集 --> プロジェクト詳細表示: 保存/キャンセル
     削除確認 --> プロジェクト詳細表示: キャンセル
     削除確認 --> プロジェクト一覧: 削除確定
     
-    地図検索 --> 法令情報更新: 地点選択
-    用途地域検索 --> 法令情報更新: 検索実行
-    法令情報更新 --> プロジェクト詳細表示: 保存完了
+    用途地域検索 --> 法令情報確認: 検索実行
+    地図検索 --> 法令情報確認: 地点選択
+    法令情報確認 --> 法令情報保存確認: 保存ボタン
+    法令情報保存確認 --> プロジェクト詳細表示: 保存完了
 ```
 
 ### 6.4 データ構造
@@ -395,18 +501,47 @@ stateDiagram-v2
     "status": "planning"
   },
   "legalInfo": {
-    "zoneType": "商業地域",
-    "coverageRatio": 80,
-    "floorAreaRatio": 400,
-    "heightDistrict": "第三種高度地区",
-    "kokuji": {
-      "id": "412K500040001453",
-      "text": "...",
-      "effectiveDate": "2024-01-01"
+    "location": {
+      "address": "東京都千代田区丸の内1-1-1",
+      "coordinates": {
+        "latitude": 35.681236,
+        "longitude": 139.767125
+      }
+    },
+    "zoning_info": {
+      "zone_type": "商業地域",
+      "fire_prevention": "防火地域",
+      "coverage_ratio": 80,
+      "floor_area_ratio": 400,
+      "building_area": 800,
+      "total_floor_area": 3200,
+      "height_district": "第三種高度地区",
+      "area_classification": "市街化区域",
+      "scenic_district": null
+    },
+    "building_restrictions": {
+      "building_standard_law_48": {
+        "allowed_uses": ["事務所", "店舗", "共同住宅"],
+        "restrictions": []
+      },
+      "law_appendix_2": {
+        "category": "第二種",
+        "restrictions": []
+      }
+    },
+    "regulations": {
+      "notifications": [{
+        "notification_id": "412K500040001453",
+        "content": "...",
+        "effective_date": "2024-01-01"
+      }],
+      "tokyo_building_safety": {
+        "article_numbers": ["第30条", "第31条"],
+        "content": "..."
+      }
     }
   }
 }
-
 ```
 
 ## 7. 建築計算機能
