@@ -58,6 +58,21 @@ describe('Legal API Endpoints', () => {
       expect(res.statusCode).toBe(400);
       expect(res.body).toHaveProperty('error', '住所を入力してください');
     });
+
+    it('Zenrin APIがエラーを返した場合は適切なエラーメッセージを返す', async () => {
+      nock.cleanAll();
+      nock('https://test-web.zmaps-api.com')
+        .get('/geocode')
+        .query(true)
+        .reply(500, { error: 'Internal Server Error' });
+
+      const res = await request(app)
+        .post('/api/legal/address/search')
+        .send({ address: '東京都千代田区丸の内1丁目' });
+
+      expect(res.statusCode).toBe(500);
+      expect(res.body).toHaveProperty('error');
+    });
   });
 
   describe('GET /api/landuse', () => {
@@ -80,6 +95,21 @@ describe('Legal API Endpoints', () => {
 
       expect(res.statusCode).toBe(400);
       expect(res.body).toHaveProperty('error', '緯度・経度を指定してください');
+    });
+
+    it('Zenrin WMS APIがエラーを返した場合は適切なエラーメッセージを返す', async () => {
+      nock.cleanAll();
+      nock('https://test-web.zmaps-api.com')
+        .get('/map/wms/youto')
+        .query(true)
+        .reply(500, { error: 'Internal Server Error' });
+
+      const res = await request(app)
+        .get('/api/landuse')
+        .query({ lat: '35.6814', lng: '139.7671' });
+
+      expect(res.statusCode).toBe(500);
+      expect(res.body).toHaveProperty('error');
     });
   });
 }); 
