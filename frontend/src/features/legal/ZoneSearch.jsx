@@ -292,11 +292,9 @@ const ZoneSearch = () => {
         setLandUseInfo(landUseResponse.data);
 
         // 告示文の取得
-        if (landUseResponse.data.kokujiId) {
-          const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/${landUseResponse.data.kokujiId}`);
-          if (kokujiResponse.data.status === 'success') {
-            setKokujiText(kokujiResponse.data.data.kokuji_text);
-          }
+        const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`);
+        if (kokujiResponse.data.status === 'success') {
+          setKokujiText(kokujiResponse.data.data.kokuji_text);
         }
       } catch (error) {
         console.error('Search error:', error);
@@ -397,11 +395,9 @@ const ZoneSearch = () => {
         setLandUseInfo(landUseResponse.data);
 
         // 告示文の取得
-        if (landUseResponse.data.kokujiId) {
-          const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/${landUseResponse.data.kokujiId}`);
-          if (kokujiResponse.data.status === 'success') {
-            setKokujiText(kokujiResponse.data.data.kokuji_text);
-          }
+        const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`);
+        if (kokujiResponse.data.status === 'success') {
+          setKokujiText(kokujiResponse.data.data.kokuji_text);
         }
       } else {
         throw new Error('住所が見つかりませんでした');

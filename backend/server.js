@@ -146,7 +146,7 @@ app.get('/api/landuse', async (req, res) => {
       buildingCoverageRatio2: properties.kenpei2?.toString() || '',
       scenicZoneName: properties.f_meisho?.toString() || '',
       scenicZoneType: properties.f_shu?.toString() || '',
-      kokujiId: properties.kokuji_id?.toString() || ''
+      kokujiId: '412K500040001453' // 固定の告示ID
     };
 
     res.json(regulationData);
@@ -171,6 +171,18 @@ app.get('/api/landuse', async (req, res) => {
 app.get('/api/kokuji/:kokuji_id', async (req, res) => {
   try {
     const { kokuji_id } = req.params;
+    console.log('告示文取得リクエスト:', { 
+      kokuji_id,
+      url: `https://kokujiapi.azurewebsites.net/api/v1/getKokuji`,
+      params: {
+        kokuji_id,
+        response_format: 'plain'
+      }
+    });
+
+    // APIリクエストの前にログ
+    console.log('告示文API リクエスト開始');
+    
     const response = await axios.get(
       `https://kokujiapi.azurewebsites.net/api/v1/getKokuji`,
       {
@@ -179,15 +191,33 @@ app.get('/api/kokuji/:kokuji_id', async (req, res) => {
           response_format: 'plain'
         },
         headers: {
-          'accept': 'application/xml'
-        }
+          'accept': 'application/xml',
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000 // 10秒でタイムアウト
       }
     );
+
+    // レスポンスの詳細なログ
+    console.log('告示文API レスポンス:', {
+      status: response.status,
+      statusText: response.statusText,
+      contentType: response.headers['content-type'],
+      dataType: typeof response.data,
+      dataLength: response.data ? response.data.length : 0,
+      data: response.data.substring(0, 100) // 最初の100文字のみログ出力
+    });
 
     // <Law>タグを削除（前後の空白も含めて削除）
     let kokujiText = response.data;
     kokujiText = kokujiText.replace(/^\s*<Law>\s*/g, '');  // 先頭の<Law>を削除
     kokujiText = kokujiText.replace(/\s*<\/Law>\s*$/g, ''); // 末尾の</Law>を削除
+
+    // 成功レスポンスの内容をログ
+    console.log('告示文 処理後データ:', {
+      textLength: kokujiText.length,
+      preview: kokujiText.substring(0, 100) // 最初の100文字のみログ出力
+    });
 
     res.json({
       status: 'success',
@@ -198,10 +228,36 @@ app.get('/api/kokuji/:kokuji_id', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('告示文取得エラー:', error);
-    res.status(500).json({ 
+    // エラーの詳細なログ
+    console.error('告示文取得エラー:', {
+      message: error.message,
+      name: error.name,
+      code: error.code,
+      response: {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers
+      },
+      request: {
+        method: error.config?.method,
+        url: error.config?.url,
+        params: error.config?.params,
+        headers: error.config?.headers
+      }
+    });
+
+    // より詳細なエラーメッセージを返す
+    res.status(error.response?.status || 500).json({ 
       status: 'error',
-      message: '告示文の取得に失敗しました'
+      message: '告示文の取得に失敗しました',
+      error: {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      }
     });
   }
 });
