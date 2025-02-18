@@ -4,15 +4,14 @@ const cors = require('cors');
 const axios = require('axios');
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 3000;
 
 // Zenrin WMS APIの設定
 const ZENRIN_API_KEY = process.env.ZENRIN_API_KEY;
 const ZENRIN_WMS_URL = 'https://test-web.zmaps-api.com/map/wms/youto';
-const ZENRIN_GEOCODE_URL = 'https://test-web.zmaps-api.com/geocode';
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: process.env.CORS_ORIGIN,
   credentials: true
 }));
 app.use(express.json());
@@ -24,50 +23,6 @@ const handleApiError = (error, defaultMessage) => {
   const message = error.response?.data?.message || defaultMessage;
   return { statusCode, message };
 };
-
-// 住所検索APIエンドポイント
-app.post('/api/legal/address/search', async (req, res) => {
-  try {
-    const { address } = req.body;
-    if (!address) {
-      return res.status(400).json({ error: '住所を入力してください' });
-    }
-
-    // Zenrinジオコーディング APIを呼び出し
-    const geocodeResponse = await axios.get(ZENRIN_GEOCODE_URL, {
-      params: {
-        'q': address,
-        'output': 'json'
-      },
-      headers: {
-        'x-api-key': ZENRIN_API_KEY
-      }
-    });
-
-    if (!geocodeResponse.data || !geocodeResponse.data.features || geocodeResponse.data.features.length === 0) {
-      return res.status(404).json({ error: '住所が見つかりませんでした' });
-    }
-
-    const location = geocodeResponse.data.features[0].geometry.coordinates;
-    const [lng, lat] = location;
-
-    // 用途地域情報を取得
-    const landUseResponse = await axios.get(`${req.protocol}://${req.get('host')}/api/landuse`, {
-      params: { lat, lng }
-    });
-
-    res.json({
-      location: { lat, lng },
-      landUseInfo: landUseResponse.data
-    });
-  } catch (error) {
-    console.error('Address Search Error:', error);
-    res.status(500).json({ 
-      error: '住所検索に失敗しました',
-      details: error.response?.data || error.message
-    });
-  }
-});
 
 // 用途地域情報取得エンドポイント
 app.get('/api/landuse', async (req, res) => {
@@ -145,8 +100,7 @@ app.get('/api/landuse', async (req, res) => {
       zoneMap2: properties.map2?.toString() || '',
       buildingCoverageRatio2: properties.kenpei2?.toString() || '',
       scenicZoneName: properties.f_meisho?.toString() || '',
-      scenicZoneType: properties.f_shu?.toString() || '',
-      kokujiId: properties.kokuji_id?.toString() || ''
+      scenicZoneType: properties.f_shu?.toString() || ''
     };
 
     res.json(regulationData);
@@ -167,56 +121,12 @@ app.get('/api/landuse', async (req, res) => {
   }
 });
 
-// 告示文取得エンドポイント
-app.get('/api/kokuji/:kokuji_id', async (req, res) => {
-  try {
-    const { kokuji_id } = req.params;
-    const response = await axios.get(
-      `https://kokujiapi.azurewebsites.net/api/v1/getKokuji`,
-      {
-        params: {
-          kokuji_id,
-          response_format: 'plain'
-        },
-        headers: {
-          'accept': 'application/xml'
-        }
-      }
-    );
-
-    // <Law>タグを削除（前後の空白も含めて削除）
-    let kokujiText = response.data;
-    kokujiText = kokujiText.replace(/^\s*<Law>\s*/g, '');  // 先頭の<Law>を削除
-    kokujiText = kokujiText.replace(/\s*<\/Law>\s*$/g, ''); // 末尾の</Law>を削除
-
-    res.json({
-      status: 'success',
-      data: {
-        kokuji_text: kokujiText,
-        kokuji_id,
-        updated_at: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    console.error('告示文取得エラー:', error);
-    res.status(500).json({ 
-      status: 'error',
-      message: '告示文の取得に失敗しました'
-    });
-  }
-});
-
 // エラーハンドリングミドルウェア
 app.use((err, req, res, next) => {
   console.error('Server Error:', err);
   res.status(500).json({ error: 'サーバーエラーが発生しました' });
 });
 
-module.exports = app;
-
-// サーバー起動（テスト時は起動しない）
-if (process.env.NODE_ENV !== 'test') {
-  app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-  });
-}
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
