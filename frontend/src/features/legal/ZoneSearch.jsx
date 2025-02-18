@@ -38,6 +38,77 @@ import {
   ZONE_DIVISION_MAPPING
 } from '../../constants/zoneTypes';
 
+// 告示文ダイアログコンポーネント
+const KokujiDialog = ({ open, onClose, kokujiText }) => {
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          height: '80vh',
+          display: 'flex',
+          flexDirection: 'column'
+        }
+      }}
+    >
+      <DialogTitle>
+        告示文
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          sx={{ position: 'absolute', right: 8, top: 8 }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        <Box sx={{ 
+          fontFamily: 'serif',
+          fontSize: '1.1rem',
+          lineHeight: 1.8,
+          whiteSpace: 'pre-wrap',
+          overflowY: 'auto',
+          padding: 2
+        }}>
+          {kokujiText}
+        </Box>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const MAX_RETRY_COUNT = 3;
+const RETRY_DELAY = 1000; // 1秒
+
+const ErrorDisplay = ({ error, onRetry }) => (
+  <Box sx={{ 
+    p: 2, 
+    bgcolor: 'error.light', 
+    borderRadius: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  }}>
+    <Typography color="error.dark">
+      {error}
+    </Typography>
+    {onRetry && (
+      <Button 
+        variant="contained" 
+        color="error" 
+        size="small" 
+        onClick={onRetry}
+        sx={{ ml: 2 }}
+      >
+        再試行
+      </Button>
+    )}
+  </Box>
+);
+
 // キャッシュの設定
 const CACHE_DURATION = 1000 * 60 * 5; // 5分
 const cache = new Map();
@@ -96,48 +167,6 @@ const LoadingOverlay = ({ message }) => (
   </Backdrop>
 );
 
-// 告示文ダイアログコンポーネント
-const KokujiDialog = ({ open, onClose, kokujiText }) => {
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{
-        sx: {
-          height: '80vh',
-          display: 'flex',
-          flexDirection: 'column'
-        }
-      }}
-    >
-      <DialogTitle>
-        告示文
-        <IconButton
-          aria-label="close"
-          onClick={onClose}
-          sx={{ position: 'absolute', right: 8, top: 8 }}
-        >
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent dividers>
-        <Box sx={{ 
-          fontFamily: 'serif',
-          fontSize: '1.1rem',
-          lineHeight: 1.8,
-          whiteSpace: 'pre-wrap',
-          overflowY: 'auto',
-          padding: 2
-        }}>
-          {kokujiText}
-        </Box>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
 const ZoneSearch = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -156,6 +185,8 @@ const ZoneSearch = () => {
   const markerRef = useRef(null);
   const youtoOverlayRef = useRef(null);
   const [balloon, setBalloon] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastAction, setLastAction] = useState(null);
   const [loading, setLoading] = useState({ status: false, message: '' });
   const [helpOpen, setHelpOpen] = useState(false);
   const theme = useTheme();
@@ -182,6 +213,156 @@ const ZoneSearch = () => {
     debounceTimeout.current = setTimeout(() => {
       handleSearch(searchTerm);
     }, 500);
+  };
+
+  const handleError = async (error, action, retryFn) => {
+    console.error(`Error during ${action}:`, error);
+    
+    let errorMessage = '';
+    if (error.response) {
+      // APIからのエラーレスポンス
+      switch (error.response.status) {
+        case 400:
+          errorMessage = '入力内容が正しくありません';
+          break;
+        case 401:
+          errorMessage = 'APIキーが無効です';
+          break;
+        case 404:
+          errorMessage = '指定された情報が見つかりませんでした';
+          break;
+        case 429:
+          errorMessage = 'リクエストが多すぎます。しばらく待ってから再試行してください';
+          break;
+        case 500:
+          errorMessage = 'サーバーエラーが発生しました';
+          break;
+        default:
+          errorMessage = `エラーが発生しました (${error.response.status})`;
+      }
+    } else if (error.request) {
+      // リクエストは送信されたがレスポンスが受信できない
+      errorMessage = 'サーバーからの応答がありません';
+    } else {
+      // リクエストの作成中にエラーが発生
+      errorMessage = error.message || 'エラーが発生しました';
+    }
+
+    if (retryCount < MAX_RETRY_COUNT && retryFn) {
+      setError(`${errorMessage} - 再試行中... (${retryCount + 1}/${MAX_RETRY_COUNT})`);
+      setLastAction({ action, retryFn });
+      setRetryCount(prev => prev + 1);
+      await sleep(RETRY_DELAY);
+      await retryFn();
+    } else {
+      setError(errorMessage);
+    }
+  };
+
+  const handleSearch = async () => {
+    try {
+      setError('');
+      setRetryCount(0);
+      setLoading({ status: true, message: '住所を検索中...' });
+      
+      if (!address) {
+        setError('住所を入力してください');
+        return;
+      }
+
+      const searchFn = async () => {
+        const cacheKey = `address_${address}`;
+        const searchResult = await fetchWithCache(cacheKey, async () => {
+          const response = await fetch('https://test-web.zmaps-api.com/search/address', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'x-api-key': import.meta.env.VITE_ZENRIN_API_KEY,
+              'Authorization': 'referer'
+            },
+            body: new URLSearchParams({
+              word: address,
+              word_match_type: '3'
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`検索に失敗しました: ${response.status}`);
+          }
+
+          return response.json();
+        });
+
+        if (searchResult.status === "OK" && searchResult.result.info.hit > 0) {
+          const item = searchResult.result.item[0];
+          const [lng, lat] = item.position;
+          return { lat, lng };
+        } else {
+          throw new Error('住所が見つかりませんでした');
+        }
+      };
+
+      const locationData = await searchFn();
+      setLocation(locationData);
+      setLoading({ status: true, message: '地図を更新中...' });
+
+      if (mapInstanceRef.current) {
+        const latLng = new window.ZDC.LatLng(locationData.lat, locationData.lng);
+        mapInstanceRef.current.setCenter(latLng);
+        mapInstanceRef.current.setZoom(16);
+
+        if (markerRef.current) {
+          mapInstanceRef.current.removeWidget(markerRef.current);
+        }
+
+        markerRef.current = new window.ZDC.Marker(latLng);
+        mapInstanceRef.current.addWidget(markerRef.current);
+
+        setLoading({ status: true, message: '法令情報を取得中...' });
+        await fetchLandUseInfo(locationData);
+      }
+    } catch (error) {
+      handleError(error, 'search', handleSearch);
+    } finally {
+      setLoading({ status: false, message: '' });
+    }
+  };
+
+  const fetchLandUseInfo = async (location) => {
+    try {
+      const cacheKey = `landuse_${location.lat}_${location.lng}`;
+      const landUseData = await fetchWithCache(cacheKey, async () => {
+        const response = await axios.get('http://localhost:3001/api/landuse', {
+          params: location
+        });
+        return response.data;
+      });
+
+      setLandUseInfo(landUseData);
+
+      try {
+        const kokujiCacheKey = `kokuji_412K500040001453`;
+        const kokujiData = await fetchWithCache(kokujiCacheKey, async () => {
+          const response = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`);
+          return response.data;
+        });
+
+        if (kokujiData.status === 'success') {
+          setKokujiText(kokujiData.data.kokuji_text);
+        }
+      } catch (kokujiError) {
+        console.warn('告示文取得エラー:', kokujiError);
+      }
+    } catch (error) {
+      handleError(error, 'landuse', () => fetchLandUseInfo(location));
+    }
+  };
+
+  const handleRetry = async () => {
+    if (lastAction) {
+      setError('');
+      await lastAction.retryFn();
+    }
   };
 
   useEffect(() => {
@@ -274,7 +455,7 @@ const ZoneSearch = () => {
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', 'https://test-web.zmaps-api.com/map/wms/youto');
-      xhr.setRequestHeader('x-api-key', process.env.VITE_ZENRIN_API_KEY || import.meta.env.VITE_ZENRIN_API_KEY);
+      xhr.setRequestHeader('x-api-key', import.meta.env.VITE_ZENRIN_API_KEY);
       xhr.setRequestHeader('Authorization', 'referer');
       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
       xhr.responseType = 'blob';
@@ -322,7 +503,7 @@ const ZoneSearch = () => {
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', 'https://test-web.zmaps-api.com/map/wms/youto');
-      xhr.setRequestHeader('x-api-key', process.env.VITE_ZENRIN_API_KEY || import.meta.env.VITE_ZENRIN_API_KEY);
+      xhr.setRequestHeader('x-api-key', import.meta.env.VITE_ZENRIN_API_KEY);
       xhr.setRequestHeader('Authorization', 'referer');
       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
       xhr.responseType = 'json';
@@ -454,105 +635,6 @@ const ZoneSearch = () => {
     return params.join('&').replace(/%20/g, '+');
   };
 
-  const handleSearch = async () => {
-    try {
-      setError('');
-      setRetryCount(0);
-      setLoading({ status: true, message: '住所を検索中...' });
-      
-      if (!address) {
-        setError('住所を入力してください');
-        return;
-      }
-
-      const searchFn = async () => {
-        const cacheKey = `address_${address}`;
-        const searchResult = await fetchWithCache(cacheKey, async () => {
-          const response = await fetch('https://test-web.zmaps-api.com/search/address', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'x-api-key': process.env.VITE_ZENRIN_API_KEY || import.meta.env.VITE_ZENRIN_API_KEY,
-              'Authorization': 'referer'
-            },
-            body: new URLSearchParams({
-              word: address,
-              word_match_type: '3'
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error(`検索に失敗しました: ${response.status}`);
-          }
-
-          return response.json();
-        });
-
-        if (searchResult.status === "OK" && searchResult.result.info.hit > 0) {
-          const item = searchResult.result.item[0];
-          const [lng, lat] = item.position;
-          return { lat, lng };
-        } else {
-          throw new Error('住所が見つかりませんでした');
-        }
-      };
-
-      const locationData = await searchFn();
-      setLocation(locationData);
-      setLoading({ status: true, message: '地図を更新中...' });
-
-      if (mapInstanceRef.current) {
-        const latLng = new window.ZDC.LatLng(locationData.lat, locationData.lng);
-        mapInstanceRef.current.setCenter(latLng);
-        mapInstanceRef.current.setZoom(16);
-
-        if (markerRef.current) {
-          mapInstanceRef.current.removeWidget(markerRef.current);
-        }
-
-        markerRef.current = new window.ZDC.Marker(latLng);
-        mapInstanceRef.current.addWidget(markerRef.current);
-
-        setLoading({ status: true, message: '法令情報を取得中...' });
-        await fetchLandUseInfo(locationData);
-      }
-    } catch (error) {
-      handleError(error, 'search', handleSearch);
-    } finally {
-      setLoading({ status: false, message: '' });
-    }
-  };
-
-  const fetchLandUseInfo = async (location) => {
-    try {
-      const cacheKey = `landuse_${location.lat}_${location.lng}`;
-      const landUseData = await fetchWithCache(cacheKey, async () => {
-        const response = await axios.get('http://localhost:3001/api/landuse', {
-          params: location
-        });
-        return response.data;
-      });
-
-      setLandUseInfo(landUseData);
-
-      try {
-        const kokujiCacheKey = `kokuji_412K500040001453`;
-        const kokujiData = await fetchWithCache(kokujiCacheKey, async () => {
-          const response = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`);
-          return response.data;
-        });
-
-        if (kokujiData.status === 'success') {
-          setKokujiText(kokujiData.data.kokuji_text);
-        }
-      } catch (kokujiError) {
-        console.warn('告示文取得エラー:', kokujiError);
-      }
-    } catch (error) {
-      handleError(error, 'landuse', () => fetchLandUseInfo(location));
-    }
-  };
-
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
     if (mapInstanceRef.current) {
@@ -607,18 +689,6 @@ const ZoneSearch = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // モバイル向けのスタイル調整
-  const mobileStyles = useMemo(() => ({
-    searchBox: {
-      width: '100%',
-      maxWidth: 'none',
-      margin: theme.spacing(1)
-    },
-    mapContainer: {
-      height: isMobile ? 'calc(100vh - 120px)' : '100%'
-    }
-  }), [isMobile, theme]);
-
   const InfoRow = ({ label, value }) => {
     return (
       <Box sx={{ 
@@ -659,6 +729,18 @@ const ZoneSearch = () => {
       </Box>
     );
   };
+
+  // モバイル向けのスタイル調整
+  const mobileStyles = useMemo(() => ({
+    searchBox: {
+      width: '100%',
+      maxWidth: 'none',
+      margin: theme.spacing(1)
+    },
+    mapContainer: {
+      height: isMobile ? 'calc(100vh - 120px)' : '100%'
+    }
+  }), [isMobile, theme]);
 
   return (
     <Container maxWidth="xl" sx={{ height: '100vh', p: 0 }}>
@@ -711,12 +793,8 @@ const ZoneSearch = () => {
           </Box>
         </Box>
 
-        {/* 地図コンテナ */}
-        <Box sx={{ 
-          flex: 1, 
-          position: 'relative',
-          ...mobileStyles.mapContainer
-        }}>
+        {/* 既存のマップコンテンツ */}
+        <Box sx={{ flex: 1, position: 'relative' }}>
           <Box sx={{ 
             width: '100%',
             position: 'relative',
@@ -824,9 +902,12 @@ const ZoneSearch = () => {
           </Box>
 
           {error && (
-            <Typography color="error" align="center" sx={{ mb: 2 }}>
-              {error}
-            </Typography>
+            <Box sx={{ position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
+              <ErrorDisplay 
+                error={error} 
+                onRetry={retryCount < MAX_RETRY_COUNT ? handleRetry : null} 
+              />
+            </Box>
           )}
 
           {landUseInfo && (
@@ -914,16 +995,6 @@ const ZoneSearch = () => {
           )}
         </Box>
 
-        {/* エラー表示 */}
-        <Fade in={!!error}>
-          <Box sx={{ position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
-            <ErrorDisplay 
-              error={error} 
-              onRetry={retryCount < MAX_RETRY_COUNT ? handleRetry : null} 
-            />
-          </Box>
-        </Fade>
-
         {/* ローディング表示 */}
         {loading.status && <LoadingOverlay message={loading.message} />}
 
@@ -953,4 +1024,4 @@ const ZoneSearch = () => {
   );
 };
 
-export default ZoneSearch;
+export default ZoneSearch; 
