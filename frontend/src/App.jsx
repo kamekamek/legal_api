@@ -40,7 +40,6 @@ function App() {
           <Route path="/projects/new" element={<ProjectForm />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/projects/:id/edit" element={<ProjectForm />} />
-          <Route path="/legal/zone-search" element={<ZoneSearch />} />
           <Route path="/map-search/:projectId" element={<ZoneSearch />} />
         </Routes>
       </Router>

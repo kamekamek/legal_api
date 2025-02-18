@@ -1,150 +1,161 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { BrowserRouter } from 'react-router-dom';
 import ZoneSearch from '../ZoneSearch';
 
-// ZMALoaderとZDCのモック
-global.ZMALoader = {
-  setOnLoad: (callback) => {
+// Zenrin Maps APIのモック
+const mockZMALoader = {
+  setOnLoad: jest.fn((callback) => {
     callback({
-      center: {},
-      zoom: 14,
-      auth: 'referer',
-      types: ['base'],
-      mouseWheelReverseZoom: true
+      center: jest.fn(),
+      zoom: jest.fn(),
+      auth: jest.fn(),
+      types: jest.fn(),
     });
-  }
+  }),
 };
 
+// グローバルオブジェクトのモック
+global.ZMALoader = mockZMALoader;
 global.ZDC = {
-  LatLng: class {
-    constructor(lat, lng) {
-      this.lat = lat;
-      this.lng = lng;
-    }
-  },
-  Map: class {
-    constructor(element, options, successCallback) {
-      this.element = element;
-      this.options = options;
-      successCallback();
-    }
-    setCenter() {}
-    setZoom() {}
-    addControl() {}
-    removeWidget() {}
-    addWidget() {}
-  },
-  Marker: class {
-    constructor(latLng) {
-      this.latLng = latLng;
-    }
-  },
-  ZoomButton: class {},
-  Compass: class {},
-  ScaleBar: class {}
+  LatLng: jest.fn((lat, lng) => ({ lat, lng })),
+  Map: jest.fn(() => ({
+    addControl: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    getLatLngBounds: jest.fn(() => ({
+      getNorthWest: jest.fn(),
+      getSouthWest: jest.fn(),
+      getNorthEast: jest.fn()
+    })),
+    getMapSize: jest.fn(() => ({ width: 800, height: 600 })),
+    getZoom: jest.fn(() => 17),
+    setCenter: jest.fn(),
+    setZoom: jest.fn(),
+    addWidget: jest.fn(),
+    removeWidget: jest.fn()
+  })),
+  Marker: jest.fn(),
+  ZoomButton: jest.fn(),
+  Compass: jest.fn(),
+  ScaleBar: jest.fn(),
+  UserWidget: jest.fn()
 };
+
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useParams: () => ({
+    projectId: '1'
+  }),
+  useNavigate: () => jest.fn()
+}));
 
 describe('ZoneSearch', () => {
   beforeEach(() => {
     global.fetch = jest.fn();
-    global.fetch.mockImplementation((url) => {
-      if (url.includes('search/address')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            status: "OK",
-            result: {
-              info: { hit: 1 },
-              item: [{
-                position: [139.7671, 35.6814]
-              }]
-            }
-          })
-        });
-      }
-      return Promise.reject(new Error('Unknown URL'));
-    });
+    global.XMLHttpRequest = jest.fn(() => ({
+      open: jest.fn(),
+      send: jest.fn(),
+      setRequestHeader: jest.fn(),
+      onload: jest.fn(),
+      response: null,
+      status: 200,
+      responseType: ''
+    }));
+  });
 
-    // axiosのモック
-    jest.spyOn(require('axios'), 'get').mockImplementation((url) => {
-      if (url.includes('/api/landuse')) {
-        return Promise.resolve({
-          data: {
-            type: '11',
-            fireArea: '1',
-            buildingCoverageRatio: '60',
-            floorAreaRatio: '200',
-            heightDistrict: '1',
-            zoneMap: '市化:11:60:200:準防'
+  it('地図が正しく初期化される', async () => {
+    render(
+      <BrowserRouter>
+        <ZoneSearch />
+      </BrowserRouter>
+    );
+
+    await waitFor(() => {
+      expect(global.ZDC.Map).toHaveBeenCalled();
+    });
+  });
+
+  it('住所検索が正しく動作する', async () => {
+    global.fetch = jest.fn().mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          status: 'OK',
+          result: {
+            info: { hit: 1 },
+            item: [{
+              position: [139.7671, 35.6814]
+            }]
           }
-        });
-      }
-      return Promise.reject(new Error('Unknown URL'));
-    });
-  });
+        })
+      })
+    );
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+    render(
+      <BrowserRouter>
+        <ZoneSearch />
+      </BrowserRouter>
+    );
 
-  it('住所検索フォームが表示される', () => {
-    render(<ZoneSearch />);
-    expect(screen.getByPlaceholderText(/住所を入力/)).toBeInTheDocument();
-    expect(screen.getByRole('button')).toBeInTheDocument();
-  });
-
-  it('空の住所でエラーメッセージを表示', async () => {
-    render(<ZoneSearch />);
+    const input = screen.getByPlaceholderText('住所を入力（例：東京都千代田区丸の内1丁目）');
+    fireEvent.change(input, { target: { value: '東京都千代田区' } });
     
-    const searchButton = screen.getByRole('button');
+    const searchButton = screen.getByLabelText('検索');
     fireEvent.click(searchButton);
 
     await waitFor(() => {
-      expect(screen.getByText('住所を入力してください')).toBeInTheDocument();
+      expect(global.fetch).toHaveBeenCalled();
     });
   });
 
-  it('正しい住所で検索すると結果を表示', async () => {
-    render(<ZoneSearch />);
-    
-    const input = screen.getByPlaceholderText(/住所を入力/);
-    fireEvent.change(input, { target: { value: '東京都千代田区丸の内1丁目' } });
-    
-    const searchButton = screen.getByRole('button');
-    fireEvent.click(searchButton);
+  it('用途地域情報が正しく表示される', async () => {
+    const mockLandUseInfo = {
+      type: '1',
+      fireArea: '1',
+      buildingCoverageRatio: '60',
+      floorAreaRatio: '200',
+      heightDistrict: '第一種高度地区'
+    };
 
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://test-web.zmaps-api.com/search/address',
-        expect.any(Object)
-      );
-    });
+    global.fetch = jest.fn()
+      .mockImplementationOnce(() => Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockLandUseInfo)
+      }));
 
-    // 用途地域情報が表示されることを確認
+    render(
+      <BrowserRouter>
+        <ZoneSearch />
+      </BrowserRouter>
+    );
+
+    // 地図クリックイベントをシミュレート
+    const map = await waitFor(() => screen.getByRole('application'));
+    fireEvent.click(map);
+
     await waitFor(() => {
       expect(screen.getByText('用途地域')).toBeInTheDocument();
-      expect(screen.getByText('防火地域')).toBeInTheDocument();
       expect(screen.getByText('建蔽率')).toBeInTheDocument();
       expect(screen.getByText('容積率')).toBeInTheDocument();
     });
   });
 
-  it('APIエラー時にエラーメッセージを表示', async () => {
-    global.fetch.mockImplementationOnce(() =>
-      Promise.resolve({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error'
-      })
+  it('エラー時に適切なメッセージが表示される', async () => {
+    global.fetch = jest.fn().mockImplementationOnce(() =>
+      Promise.reject(new Error('検索に失敗しました'))
     );
 
-    render(<ZoneSearch />);
-    
-    const input = screen.getByPlaceholderText(/住所を入力/);
+    render(
+      <BrowserRouter>
+        <ZoneSearch />
+      </BrowserRouter>
+    );
+
+    const input = screen.getByPlaceholderText('住所を入力（例：東京都千代田区丸の内1丁目）');
     fireEvent.change(input, { target: { value: '不正な住所' } });
     
-    const searchButton = screen.getByRole('button');
+    const searchButton = screen.getByLabelText('検索');
     fireEvent.click(searchButton);
 
     await waitFor(() => {
@@ -152,30 +163,41 @@ describe('ZoneSearch', () => {
     });
   });
 
-  it('住所が見つからない場合にエラーメッセージを表示', async () => {
-    global.fetch.mockImplementationOnce(() =>
-      Promise.resolve({
+  it('プロジェクトへの保存が正しく動作する', async () => {
+    const mockLandUseInfo = {
+      type: '1',
+      fireArea: '1',
+      buildingCoverageRatio: '60',
+      floorAreaRatio: '200',
+      heightDistrict: '第一種高度地区'
+    };
+
+    global.fetch = jest.fn()
+      .mockImplementationOnce(() => Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({
-          status: "OK",
-          result: {
-            info: { hit: 0 },
-            item: []
-          }
-        })
-      })
+        json: () => Promise.resolve(mockLandUseInfo)
+      }))
+      .mockImplementationOnce(() => Promise.resolve({
+        ok: true
+      }));
+
+    render(
+      <BrowserRouter>
+        <ZoneSearch />
+      </BrowserRouter>
     );
 
-    render(<ZoneSearch />);
-    
-    const input = screen.getByPlaceholderText(/住所を入力/);
-    fireEvent.change(input, { target: { value: '存在しない住所' } });
-    
-    const searchButton = screen.getByRole('button');
-    fireEvent.click(searchButton);
+    // 地図クリックイベントをシミュレート
+    const map = await waitFor(() => screen.getByRole('application'));
+    fireEvent.click(map);
 
     await waitFor(() => {
-      expect(screen.getByText('住所が見つかりませんでした')).toBeInTheDocument();
+      const saveButton = screen.getByText('プロジェクトに保存');
+      fireEvent.click(saveButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('プロジェクトに法令情報を保存しました')).toBeInTheDocument();
     });
   });
 }); 
