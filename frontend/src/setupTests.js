@@ -32,4 +32,40 @@ global.ZDC = {
 };
 
 // 環境変数のモック
-process.env.VITE_ZENRIN_API_KEY = 'test-api-key'; 
+process.env.VITE_ZENRIN_API_KEY = 'test-api-key';
+
+// グローバルなモックの設定
+global.ResizeObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}));
+
+// Fetch APIのモック
+global.fetch = jest.fn();
+
+// XMLHttpRequestのモック
+global.XMLHttpRequest = jest.fn(() => ({
+  open: jest.fn(),
+  send: jest.fn(),
+  setRequestHeader: jest.fn(),
+  onload: jest.fn(),
+  response: null,
+  status: 200,
+  responseType: ''
+}));
+
+// windowのモック
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: jest.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
+}); 

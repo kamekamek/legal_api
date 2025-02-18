@@ -167,6 +167,9 @@ const LoadingOverlay = ({ message }) => (
   </Backdrop>
 );
 
+// sleepユーティリティ関数の追加
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 const ZoneSearch = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -267,6 +270,7 @@ const ZoneSearch = () => {
       
       if (!address) {
         setError('住所を入力してください');
+        setLoading({ status: false, message: '' });
         return;
       }
 
@@ -277,7 +281,7 @@ const ZoneSearch = () => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
-              'x-api-key': import.meta.env.VITE_ZENRIN_API_KEY,
+              'x-api-key': import.meta.env.VITE_ZENRIN_API_KEY || 'test-api-key',
               'Authorization': 'referer'
             },
             body: new URLSearchParams({
@@ -322,7 +326,7 @@ const ZoneSearch = () => {
         await fetchLandUseInfo(locationData);
       }
     } catch (error) {
-      handleError(error, 'search', handleSearch);
+      await handleError(error, 'search', handleSearch);
     } finally {
       setLoading({ status: false, message: '' });
     }
