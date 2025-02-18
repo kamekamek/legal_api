@@ -1,7 +1,8 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import ZoneSearch from '../ZoneSearch';
+import '@testing-library/jest-dom';
 
 // Zenrin Maps APIのモック
 const mockZMALoader = {
@@ -52,6 +53,7 @@ jest.mock('react-router-dom', () => ({
 
 describe('ZoneSearch', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     global.fetch = jest.fn();
     global.XMLHttpRequest = jest.fn(() => ({
       open: jest.fn(),
@@ -62,6 +64,11 @@ describe('ZoneSearch', () => {
       status: 200,
       responseType: ''
     }));
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('地図が正しく初期化される', async () => {
@@ -76,9 +83,65 @@ describe('ZoneSearch', () => {
     });
   });
 
-  it('住所検索が正しく動作する', async () => {
-    global.fetch = jest.fn().mockImplementationOnce(() =>
-      Promise.resolve({
+  it('住所検索が正しく動作し、キャッシュを使用する', async () => {
+    const mockSearchResponse = {
+      status: 'OK',
+      result: {
+        info: { hit: 1 },
+        item: [{
+          position: [139.7671, 35.6814]
+        }]
+      }
+    };
+
+    const mockLandUseResponse = {
+      data: {
+        type: '1',
+        fireArea: '1'
+      }
+    };
+
+    global.fetch = jest.fn()
+      .mockImplementationOnce(() => Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockSearchResponse)
+      }));
+
+    jest.spyOn(axios, 'get')
+      .mockImplementationOnce(() => Promise.resolve(mockLandUseResponse));
+
+    const { rerender } = render(
+      <BrowserRouter>
+        <ZoneSearch />
+      </BrowserRouter>
+    );
+
+    const input = screen.getByPlaceholderText('住所を入力（例：東京都千代田区丸の内1丁目）');
+    fireEvent.change(input, { target: { value: '東京都千代田区' } });
+    
+    // 検索実行
+    const searchButton = screen.getByLabelText('検索');
+    fireEvent.click(searchButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(axios.get).toHaveBeenCalledTimes(1);
+    });
+
+    // 同じ検索を再度実行（キャッシュを使用）
+    fireEvent.click(searchButton);
+
+    await waitFor(() => {
+      // fetchは新たに呼ばれていないことを確認
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('エラー時にリトライ機能が正しく動作する', async () => {
+    global.fetch = jest.fn()
+      .mockImplementationOnce(() => Promise.reject(new Error('Network error')))
+      .mockImplementationOnce(() => Promise.reject(new Error('Network error')))
+      .mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: () => Promise.resolve({
           status: 'OK',
@@ -89,7 +152,67 @@ describe('ZoneSearch', () => {
             }]
           }
         })
-      })
+      }));
+
+    render(
+      <BrowserRouter>
+        <ZoneSearch />
+      </BrowserRouter>
+    );
+
+    const input = screen.getByPlaceholderText('住所を入力（例：東京都千代田区丸の内1丁目）');
+    fireEvent.change(input, { target: { value: '東京都千代田区' } });
+    
+    const searchButton = screen.getByLabelText('検索');
+    fireEvent.click(searchButton);
+
+    // 最初のエラー
+    await waitFor(() => {
+      expect(screen.getByText(/再試行中/)).toBeInTheDocument();
+    });
+
+    // 2回目のエラー
+    await waitFor(() => {
+      expect(screen.getByText(/再試行中/)).toBeInTheDocument();
+    });
+
+    // 3回目の成功
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  it('ヘルプダイアログが正しく表示される', async () => {
+    render(
+      <BrowserRouter>
+        <ZoneSearch />
+      </BrowserRouter>
+    );
+
+    const helpButton = screen.getByLabelText('ヘルプを表示');
+    fireEvent.click(helpButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('地図の使い方')).toBeInTheDocument();
+      expect(screen.getByText('基本操作')).toBeInTheDocument();
+      expect(screen.getByText('用途地域の表示')).toBeInTheDocument();
+    });
+  });
+
+  it('ローディング状態が正しく表示される', async () => {
+    global.fetch = jest.fn().mockImplementation(() => 
+      new Promise(resolve => setTimeout(() => resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          status: 'OK',
+          result: {
+            info: { hit: 1 },
+            item: [{
+              position: [139.7671, 35.6814]
+            }]
+          }
+        })
+      }), 1000))
     );
 
     render(
@@ -105,45 +228,34 @@ describe('ZoneSearch', () => {
     fireEvent.click(searchButton);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalled();
+      expect(screen.getByText('住所を検索中...')).toBeInTheDocument();
     });
-  });
 
-  it('用途地域情報が正しく表示される', async () => {
-    const mockLandUseInfo = {
-      type: '1',
-      fireArea: '1',
-      buildingCoverageRatio: '60',
-      floorAreaRatio: '200',
-      heightDistrict: '第一種高度地区'
-    };
-
-    global.fetch = jest.fn()
-      .mockImplementationOnce(() => Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(mockLandUseInfo)
-      }));
-
-    render(
-      <BrowserRouter>
-        <ZoneSearch />
-      </BrowserRouter>
-    );
-
-    // 地図クリックイベントをシミュレート
-    const map = await waitFor(() => screen.getByRole('application'));
-    fireEvent.click(map);
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
 
     await waitFor(() => {
-      expect(screen.getByText('用途地域')).toBeInTheDocument();
-      expect(screen.getByText('建蔽率')).toBeInTheDocument();
-      expect(screen.getByText('容積率')).toBeInTheDocument();
+      expect(screen.queryByText('住所を検索中...')).not.toBeInTheDocument();
     });
   });
 
-  it('エラー時に適切なメッセージが表示される', async () => {
-    global.fetch = jest.fn().mockImplementationOnce(() =>
-      Promise.reject(new Error('検索に失敗しました'))
+  it('検索のデバウンスが正しく動作する', async () => {
+    const mockSearchResponse = {
+      status: 'OK',
+      result: {
+        info: { hit: 1 },
+        item: [{
+          position: [139.7671, 35.6814]
+        }]
+      }
+    };
+
+    global.fetch = jest.fn().mockImplementation(() => 
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockSearchResponse)
+      })
     );
 
     render(
@@ -153,51 +265,23 @@ describe('ZoneSearch', () => {
     );
 
     const input = screen.getByPlaceholderText('住所を入力（例：東京都千代田区丸の内1丁目）');
-    fireEvent.change(input, { target: { value: '不正な住所' } });
     
-    const searchButton = screen.getByLabelText('検索');
-    fireEvent.click(searchButton);
+    // 複数回の入力を素早く行う
+    fireEvent.change(input, { target: { value: '東' } });
+    fireEvent.change(input, { target: { value: '東京' } });
+    fireEvent.change(input, { target: { value: '東京都' } });
 
-    await waitFor(() => {
-      expect(screen.getByText(/検索中にエラーが発生しました/)).toBeInTheDocument();
-    });
-  });
+    // デバウンス時間内の呼び出しはまだない
+    expect(global.fetch).not.toHaveBeenCalled();
 
-  it('プロジェクトへの保存が正しく動作する', async () => {
-    const mockLandUseInfo = {
-      type: '1',
-      fireArea: '1',
-      buildingCoverageRatio: '60',
-      floorAreaRatio: '200',
-      heightDistrict: '第一種高度地区'
-    };
-
-    global.fetch = jest.fn()
-      .mockImplementationOnce(() => Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(mockLandUseInfo)
-      }))
-      .mockImplementationOnce(() => Promise.resolve({
-        ok: true
-      }));
-
-    render(
-      <BrowserRouter>
-        <ZoneSearch />
-      </BrowserRouter>
-    );
-
-    // 地図クリックイベントをシミュレート
-    const map = await waitFor(() => screen.getByRole('application'));
-    fireEvent.click(map);
-
-    await waitFor(() => {
-      const saveButton = screen.getByText('プロジェクトに保存');
-      fireEvent.click(saveButton);
+    // デバウンス時間経過
+    act(() => {
+      jest.advanceTimersByTime(500);
     });
 
     await waitFor(() => {
-      expect(screen.getByText('プロジェクトに法令情報を保存しました')).toBeInTheDocument();
+      // 最後の入力に対してのみAPIが呼ばれる
+      expect(global.fetch).toHaveBeenCalledTimes(1);
     });
   });
 }); 

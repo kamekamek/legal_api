@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   TextField,
@@ -12,13 +12,20 @@ import {
   DialogTitle,
   DialogContent,
   Snackbar,
-  Alert
+  Alert,
+  CircularProgress,
+  Tooltip,
+  Fade,
+  useMediaQuery,
+  useTheme,
+  Backdrop
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import axios from 'axios';
 import {
   YOUTO_MAPPING,
@@ -30,6 +37,64 @@ import {
   parseRatios,
   ZONE_DIVISION_MAPPING
 } from '../../constants/zoneTypes';
+
+// キャッシュの設定
+const CACHE_DURATION = 1000 * 60 * 5; // 5分
+const cache = new Map();
+
+// ヘルプダイアログコンポーネント
+const HelpDialog = ({ open, onClose }) => (
+  <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <DialogTitle>
+      地図の使い方
+      <IconButton
+        aria-label="close"
+        onClick={onClose}
+        sx={{ position: 'absolute', right: 8, top: 8 }}
+      >
+        <CloseIcon />
+      </IconButton>
+    </DialogTitle>
+    <DialogContent>
+      <Box sx={{ py: 2 }}>
+        <Typography variant="h6" gutterBottom>基本操作</Typography>
+        <Typography paragraph>
+          • ズーム: マウスホイールまたは画面左上のボタン<br />
+          • 移動: ドラッグまたは矢印キー<br />
+          • 地点選択: クリック
+        </Typography>
+        <Typography variant="h6" gutterBottom>用途地域の表示</Typography>
+        <Typography paragraph>
+          • ズームレベル15以上で用途地域を表示可能<br />
+          • 右上のスイッチで表示/非表示を切り替え
+        </Typography>
+        <Typography variant="h6" gutterBottom>情報の取得</Typography>
+        <Typography>
+          • 地点をクリックして法令情報を取得<br />
+          • 住所検索で特定の場所を検索<br />
+          • 取得した情報はプロジェクトに保存可能
+        </Typography>
+      </Box>
+    </DialogContent>
+  </Dialog>
+);
+
+// ローディングコンポーネント
+const LoadingOverlay = ({ message }) => (
+  <Backdrop
+    sx={{
+      color: '#fff',
+      zIndex: (theme) => theme.zIndex.drawer + 1,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2
+    }}
+    open={true}
+  >
+    <CircularProgress color="inherit" />
+    <Typography>{message}</Typography>
+  </Backdrop>
+);
 
 // 告示文ダイアログコンポーネント
 const KokujiDialog = ({ open, onClose, kokujiText }) => {
@@ -91,6 +156,33 @@ const ZoneSearch = () => {
   const markerRef = useRef(null);
   const youtoOverlayRef = useRef(null);
   const [balloon, setBalloon] = useState(null);
+  const [loading, setLoading] = useState({ status: false, message: '' });
+  const [helpOpen, setHelpOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const debounceTimeout = useRef(null);
+
+  // APIリクエストの最適化
+  const fetchWithCache = async (key, fetchFn) => {
+    const cached = cache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.data;
+    }
+
+    const data = await fetchFn();
+    cache.set(key, { data, timestamp: Date.now() });
+    return data;
+  };
+
+  // 検索処理の最適化
+  const debouncedSearch = (searchTerm) => {
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+    debounceTimeout.current = setTimeout(() => {
+      handleSearch(searchTerm);
+    }, 500);
+  };
 
   useEffect(() => {
     // 地図の初期化
@@ -182,7 +274,7 @@ const ZoneSearch = () => {
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', 'https://test-web.zmaps-api.com/map/wms/youto');
-      xhr.setRequestHeader('x-api-key', import.meta.env.VITE_ZENRIN_API_KEY);
+      xhr.setRequestHeader('x-api-key', process.env.VITE_ZENRIN_API_KEY || import.meta.env.VITE_ZENRIN_API_KEY);
       xhr.setRequestHeader('Authorization', 'referer');
       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
       xhr.responseType = 'blob';
@@ -230,7 +322,7 @@ const ZoneSearch = () => {
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', 'https://test-web.zmaps-api.com/map/wms/youto');
-      xhr.setRequestHeader('x-api-key', import.meta.env.VITE_ZENRIN_API_KEY);
+      xhr.setRequestHeader('x-api-key', process.env.VITE_ZENRIN_API_KEY || import.meta.env.VITE_ZENRIN_API_KEY);
       xhr.setRequestHeader('Authorization', 'referer');
       xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
       xhr.responseType = 'json';
@@ -365,80 +457,99 @@ const ZoneSearch = () => {
   const handleSearch = async () => {
     try {
       setError('');
+      setRetryCount(0);
+      setLoading({ status: true, message: '住所を検索中...' });
       
       if (!address) {
         setError('住所を入力してください');
         return;
       }
 
-      const response = await fetch('https://test-web.zmaps-api.com/search/address', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'x-api-key': import.meta.env.VITE_ZENRIN_API_KEY,
-          'Authorization': 'referer'
-        },
-        body: new URLSearchParams({
-          word: address,
-          word_match_type: '3'
-        })
-      });
+      const searchFn = async () => {
+        const cacheKey = `address_${address}`;
+        const searchResult = await fetchWithCache(cacheKey, async () => {
+          const response = await fetch('https://test-web.zmaps-api.com/search/address', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'x-api-key': process.env.VITE_ZENRIN_API_KEY || import.meta.env.VITE_ZENRIN_API_KEY,
+              'Authorization': 'referer'
+            },
+            body: new URLSearchParams({
+              word: address,
+              word_match_type: '3'
+            })
+          });
 
-      if (!response.ok) {
-        throw new Error(`検索に失敗しました: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('検索結果:', data);
-
-      if (data.status === "OK" && data.result.info.hit > 0) {
-        const item = data.result.item[0];
-        const [lng, lat] = item.position;
-
-        const newLocation = { lat, lng };
-        setLocation(newLocation);
-
-        if (mapInstanceRef.current) {
-          const latLng = new window.ZDC.LatLng(lat, lng);
-          mapInstanceRef.current.setCenter(latLng);
-          mapInstanceRef.current.setZoom(16);
-
-          if (markerRef.current) {
-            mapInstanceRef.current.removeWidget(markerRef.current);
+          if (!response.ok) {
+            throw new Error(`検索に失敗しました: ${response.status}`);
           }
 
-          markerRef.current = new window.ZDC.Marker(latLng);
-          mapInstanceRef.current.addWidget(markerRef.current);
+          return response.json();
+        });
+
+        if (searchResult.status === "OK" && searchResult.result.info.hit > 0) {
+          const item = searchResult.result.item[0];
+          const [lng, lat] = item.position;
+          return { lat, lng };
+        } else {
+          throw new Error('住所が見つかりませんでした');
+        }
+      };
+
+      const locationData = await searchFn();
+      setLocation(locationData);
+      setLoading({ status: true, message: '地図を更新中...' });
+
+      if (mapInstanceRef.current) {
+        const latLng = new window.ZDC.LatLng(locationData.lat, locationData.lng);
+        mapInstanceRef.current.setCenter(latLng);
+        mapInstanceRef.current.setZoom(16);
+
+        if (markerRef.current) {
+          mapInstanceRef.current.removeWidget(markerRef.current);
         }
 
-        const landUseResponse = await axios.get('http://localhost:3001/api/landuse', {
-          params: newLocation
-        });
-        
-        console.log('APIリクエスト:', {
-          lat: newLocation.lat,
-          lng: newLocation.lng
-        });
-        
-        console.log('API Response:', {
-          ...landUseResponse.data,
-          高度地区: landUseResponse.data.koudo,
-          高度地区制限値: landUseResponse.data.koudo2
-        });
-        
-        setLandUseInfo(landUseResponse.data);
+        markerRef.current = new window.ZDC.Marker(latLng);
+        mapInstanceRef.current.addWidget(markerRef.current);
 
-        // 告示文の取得
-        const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`);
-        if (kokujiResponse.data.status === 'success') {
-          setKokujiText(kokujiResponse.data.data.kokuji_text);
-        }
-      } else {
-        throw new Error('住所が見つかりませんでした');
+        setLoading({ status: true, message: '法令情報を取得中...' });
+        await fetchLandUseInfo(locationData);
       }
     } catch (error) {
-      console.error('Search error:', error);
-      setError('検索中にエラーが発生しました。' + (error.message || ''));
+      handleError(error, 'search', handleSearch);
+    } finally {
+      setLoading({ status: false, message: '' });
+    }
+  };
+
+  const fetchLandUseInfo = async (location) => {
+    try {
+      const cacheKey = `landuse_${location.lat}_${location.lng}`;
+      const landUseData = await fetchWithCache(cacheKey, async () => {
+        const response = await axios.get('http://localhost:3001/api/landuse', {
+          params: location
+        });
+        return response.data;
+      });
+
+      setLandUseInfo(landUseData);
+
+      try {
+        const kokujiCacheKey = `kokuji_412K500040001453`;
+        const kokujiData = await fetchWithCache(kokujiCacheKey, async () => {
+          const response = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`);
+          return response.data;
+        });
+
+        if (kokujiData.status === 'success') {
+          setKokujiText(kokujiData.data.kokuji_text);
+        }
+      } catch (kokujiError) {
+        console.warn('告示文取得エラー:', kokujiError);
+      }
+    } catch (error) {
+      handleError(error, 'landuse', () => fetchLandUseInfo(location));
     }
   };
 
@@ -495,6 +606,18 @@ const ZoneSearch = () => {
   const handleSnackbarClose = () => {
     setSnackbar({ ...snackbar, open: false });
   };
+
+  // モバイル向けのスタイル調整
+  const mobileStyles = useMemo(() => ({
+    searchBox: {
+      width: '100%',
+      maxWidth: 'none',
+      margin: theme.spacing(1)
+    },
+    mapContainer: {
+      height: isMobile ? 'calc(100vh - 120px)' : '100%'
+    }
+  }), [isMobile, theme]);
 
   const InfoRow = ({ label, value }) => {
     return (
@@ -565,6 +688,11 @@ const ZoneSearch = () => {
             <Typography variant="h6">用途地域検索</Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Tooltip title="ヘルプを表示">
+              <IconButton onClick={() => setHelpOpen(true)}>
+                <HelpOutlineIcon />
+              </IconButton>
+            </Tooltip>
             {landUseInfo && projectId && (
               <Button
                 variant="contained"
@@ -583,8 +711,12 @@ const ZoneSearch = () => {
           </Box>
         </Box>
 
-        {/* 既存のマップコンテンツ */}
-        <Box sx={{ flex: 1, position: 'relative' }}>
+        {/* 地図コンテナ */}
+        <Box sx={{ 
+          flex: 1, 
+          position: 'relative',
+          ...mobileStyles.mapContainer
+        }}>
           <Box sx={{ 
             width: '100%',
             position: 'relative',
@@ -781,26 +913,44 @@ const ZoneSearch = () => {
             </Paper>
           )}
         </Box>
+
+        {/* エラー表示 */}
+        <Fade in={!!error}>
+          <Box sx={{ position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
+            <ErrorDisplay 
+              error={error} 
+              onRetry={retryCount < MAX_RETRY_COUNT ? handleRetry : null} 
+            />
+          </Box>
+        </Fade>
+
+        {/* ローディング表示 */}
+        {loading.status && <LoadingOverlay message={loading.message} />}
+
+        {/* ヘルプダイアログ */}
+        <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+
+        {/* スナックバー */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={handleSnackbarClose}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert onClose={handleSnackbarClose} severity={snackbar.severity}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+
+        {/* 告示文ダイアログ */}
+        <KokujiDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          kokujiText={kokujiText}
+        />
       </Box>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert onClose={handleSnackbarClose} severity={snackbar.severity}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-
-      <KokujiDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        kokujiText={kokujiText}
-      />
     </Container>
   );
 };
 
-export default ZoneSearch; 
+export default ZoneSearch;

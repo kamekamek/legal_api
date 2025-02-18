@@ -2,52 +2,98 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
-  Button,
   TextField,
-  Typography,
-  Paper,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
   MenuItem,
+  Typography,
   CircularProgress,
-  Grid
+  Alert,
+  FormHelperText
 } from '@mui/material';
 
 const ProjectForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const isEditMode = !!id;
-
-  const [loading, setLoading] = useState(isEditMode);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     status: 'planning',
-    start_date: '',
-    end_date: '',
-    location: ''
+    address: ''
   });
+  const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
-    if (isEditMode) {
-      fetchProject();
-    }
+    const fetchProject = async () => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`http://localhost:3001/api/v1/projects/${id}`);
+        if (!response.ok) {
+          throw new Error('プロジェクトの取得に失敗しました');
+        }
+        const data = await response.json();
+        setFormData({
+          name: data.name || '',
+          description: data.description || '',
+          status: data.status || 'planning',
+          address: data.address || ''
+        });
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProject();
   }, [id]);
 
-  const fetchProject = async () => {
+  const validateForm = () => {
+    const errors = {};
+    if (!formData.name.trim()) {
+      errors.name = 'プロジェクト名は必須です';
+    }
+    if (!formData.status) {
+      errors.status = 'ステータスは必須です';
+    }
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/projects/${id}`);
-      if (!response.ok) {
-        throw new Error('プロジェクトの取得に失敗しました');
-      }
-      const data = await response.json();
-      setFormData({
-        name: data.name || '',
-        description: data.description || '',
-        status: data.status || 'planning',
-        start_date: data.start_date || '',
-        end_date: data.end_date || '',
-        location: data.location || ''
+      const url = id
+        ? `http://localhost:3001/api/v1/projects/${id}`
+        : 'http://localhost:3001/api/v1/projects';
+      const method = id ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
+
+      if (!response.ok) {
+        throw new Error('プロジェクトの保存に失敗しました');
+      }
+
+      navigate('/projects');
     } catch (error) {
       setError(error.message);
     } finally {
@@ -63,142 +109,96 @@ const ProjectForm = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const url = isEditMode
-        ? `http://localhost:3001/api/v1/projects/${id}`
-        : 'http://localhost:3001/api/v1/projects';
-      
-      const response = await fetch(url, {
-        method: isEditMode ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) {
-        throw new Error(isEditMode ? 'プロジェクトの更新に失敗しました' : 'プロジェクトの作成に失敗しました');
-      }
-
-      navigate('/projects');
-    } catch (error) {
-      setError(error.message);
-    }
-  };
-
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h5" component="h2" gutterBottom>
-          {isEditMode ? 'プロジェクト編集' : '新規プロジェクト作成'}
-        </Typography>
-        {error && (
-          <Typography color="error" sx={{ mb: 2 }}>
-            {error}
-          </Typography>
+    <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 600, mx: 'auto', p: 2 }}>
+      <Typography variant="h5" component="h1" gutterBottom>
+        {id ? 'プロジェクト編集' : '新規プロジェクト作成'}
+      </Typography>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <TextField
+        fullWidth
+        label="プロジェクト名"
+        name="name"
+        value={formData.name}
+        onChange={handleChange}
+        margin="normal"
+        error={!!validationErrors.name}
+        helperText={validationErrors.name}
+        required
+      />
+
+      <TextField
+        fullWidth
+        label="説明"
+        name="description"
+        value={formData.description}
+        onChange={handleChange}
+        margin="normal"
+        multiline
+        rows={4}
+      />
+
+      <FormControl fullWidth margin="normal" error={!!validationErrors.status}>
+        <InputLabel id="status-label">ステータス</InputLabel>
+        <Select
+          labelId="status-label"
+          id="status"
+          name="status"
+          value={formData.status}
+          onChange={handleChange}
+          label="ステータス"
+          aria-label="ステータス"
+        >
+          <MenuItem value="planning">計画中</MenuItem>
+          <MenuItem value="in_progress">進行中</MenuItem>
+          <MenuItem value="completed">完了</MenuItem>
+          <MenuItem value="on_hold">保留中</MenuItem>
+        </Select>
+        {validationErrors.status && (
+          <FormHelperText>{validationErrors.status}</FormHelperText>
         )}
-        <form onSubmit={handleSubmit}>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="プロジェクト名"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="説明"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                multiline
-                rows={4}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                select
-                label="ステータス"
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-              >
-                <MenuItem value="planning">計画中</MenuItem>
-                <MenuItem value="in_progress">進行中</MenuItem>
-                <MenuItem value="completed">完了</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="開始日"
-                name="start_date"
-                type="date"
-                value={formData.start_date}
-                onChange={handleChange}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="終了日"
-                name="end_date"
-                type="date"
-                value={formData.end_date}
-                onChange={handleChange}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="住所"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                >
-                  {isEditMode ? '更新' : '作成'}
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate('/projects')}
-                >
-                  キャンセル
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-        </form>
-      </Paper>
+      </FormControl>
+
+      <TextField
+        fullWidth
+        label="住所"
+        name="address"
+        value={formData.address}
+        disabled
+        margin="normal"
+      />
+
+      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          disabled={loading}
+        >
+          保存
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={() => navigate('/projects')}
+          disabled={loading}
+        >
+          キャンセル
+        </Button>
+      </Box>
     </Box>
   );
 };
