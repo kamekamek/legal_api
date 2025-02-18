@@ -345,30 +345,16 @@ const ZoneSearch = () => {
       setLandUseInfo(landUseData);
 
       try {
-        console.log('告示文取得開始:', { kokujiId: '412K500040001453' });
-        const kokujiCacheKey = `kokuji_412K500040001453`;
-        const kokujiData = await fetchWithCache(kokujiCacheKey, async () => {
-          const response = await axios.get('http://localhost:3001/api/kokuji/412K500040001453', {
-            headers: {
-              'Accept': 'application/json'
-            }
-          });
-          console.log('告示文取得レスポンス:', {
-            status: response.status,
-            statusText: response.statusText,
-            data: response.data
-          });
-          return response.data;
-        });
-
-        if (kokujiData.status === 'success' && kokujiData.data?.kokuji_text) {
+        console.log('告示文取得開始:', { kokujiId: landUseData.kokuji_id });
+        const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/${landUseData.kokuji_id}`);
+        if (kokujiResponse.data && kokujiResponse.data.kokuji_text) {
           console.log('告示文取得成功:', {
-            textLength: kokujiData.data.kokuji_text?.length,
-            updatedAt: kokujiData.data.updated_at
+            textLength: kokujiResponse.data.kokuji_text.length,
+            updatedAt: kokujiResponse.data.updated_at
           });
-          setKokujiText(kokujiData.data.kokuji_text);
+          setKokujiText(kokujiResponse.data.kokuji_text);
         } else {
-          console.warn('告示文取得失敗:', kokujiData);
+          console.warn('告示文取得失敗:', kokujiResponse);
           setError('告示文の取得に失敗しました');
         }
       } catch (kokujiError) {
@@ -554,9 +540,9 @@ const ZoneSearch = () => {
 
         // 告示文の取得
         try {
-          const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/412K500040001453`);
-          if (kokujiResponse.data.status === 'success') {
-            setKokujiText(kokujiResponse.data.data.kokuji_text);
+          const kokujiResponse = await axios.get(`http://localhost:3001/api/kokuji/${landUseResponse.data.kokuji_id}`);
+          if (kokujiResponse.data && kokujiResponse.data.kokuji_text) {
+            setKokujiText(kokujiResponse.data.kokuji_text);
             console.log('Kokuji text retrieved successfully'); // デバッグログ追加
           }
         } catch (kokujiError) {
@@ -704,6 +690,20 @@ const ZoneSearch = () => {
       height: isMobile ? 'calc(100vh - 120px)' : '100%'
     }
   }), [isMobile, theme]);
+
+  const mapContainerStyle = {
+    width: '70%',  // 全画面から70%に変更
+    height: '100vh',
+    float: 'left'
+  };
+
+  const sidePanelStyle = {
+    width: '30%',
+    height: '100vh',
+    float: 'right',
+    padding: '20px',
+    overflowY: 'auto'
+  };
 
   return (
     <Container maxWidth="xl" sx={{ height: '100vh', p: 0 }}>

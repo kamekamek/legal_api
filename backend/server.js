@@ -166,76 +166,38 @@ app.get('/api/landuse', async (req, res) => {
   }
 });
 
-// 告示文取得エンドポイント
+// 告示文取得APIエンドポイント
 app.get('/api/kokuji/:kokuji_id', async (req, res) => {
   try {
     const { kokuji_id } = req.params;
     console.log('告示文取得リクエスト開始:', { kokuji_id });
 
-    // APIリクエストの設定をログ出力
-    const apiConfig = {
-      url: 'https://kokujiapi.azurewebsites.net/api/v1/getKokuji',
-      params: {
-        kokuji_id,
-        response_format: 'plain'
-      },
-      headers: {
-        'accept': 'application/xml'
+    const response = await axios.get(
+      'https://kokujiapi.azurewebsites.net/api/v1/getKokuji',
+      {
+        params: {
+          kokuji_id: kokuji_id,
+          response_format: 'plain'
+        },
+        headers: {
+          'accept': 'application/xml'
+        }
       }
-    };
-    console.log('API設定:', apiConfig);
+    );
 
-    const response = await axios({
-      method: 'GET',
-      url: apiConfig.url,
-      params: apiConfig.params,
-      headers: apiConfig.headers,
-      timeout: 10000
-    });
-
-    console.log('告示文取得成功:', {
-      status: response.status,
-      contentType: response.headers['content-type'],
-      dataLength: response.data?.length
-    });
-
-    // レスポンスデータの整形
-    let kokujiText = response.data;
-    if (typeof kokujiText === 'string') {
-      kokujiText = kokujiText.replace(/^\s*<Law>\s*/g, '');
-      kokujiText = kokujiText.replace(/\s*<\/Law>\s*$/g, '');
-    }
-
-    res.json({
-      status: 'success',
-      data: {
-        kokuji_text: kokujiText,
-        kokuji_id,
+    if (response.data) {
+      res.json({
+        kokuji_text: response.data,
         updated_at: new Date().toISOString()
-      }
-    });
+      });
+    } else {
+      res.status(404).json({ error: '告示文が見つかりませんでした' });
+    }
   } catch (error) {
-    console.error('告示文取得エラー詳細:', {
-      message: error.message,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      responseData: error.response?.data,
-      config: error.config
-    });
-
-    const statusCode = error.response?.status || 500;
-    const errorMessage = error.response?.status === 404 
-      ? '指定された告示文が見つかりませんでした'
-      : '告示文の取得に失敗しました';
-
-    res.status(statusCode).json({
-      status: 'error',
-      message: errorMessage,
-      error: {
-        code: error.code,
-        status: statusCode,
-        details: error.message
-      }
+    console.error('告示文取得エラー:', error);
+    res.status(error.response?.status || 500).json({
+      error: '告示文の取得に失敗しました',
+      details: error.response?.data || error.message
     });
   }
 });
