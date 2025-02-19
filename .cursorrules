@@ -3,12 +3,12 @@
 ## プロジェクト構造
 ```
 legal_api/
-├── frontend/              # Reactフロントエンド
+├── frontend/              # Viteフロントエンド
 │   ├── src/
 │   │   ├── features/     # 機能モジュール
 │   │   ├── components/   # 共通コンポーネント
 │   │   ├── services/     # APIサービス
-│   │   ├── pages/        # ページコンポーネント
+│   │   ├── routes/       # ルーティング
 │   │   ├── hooks/        # カスタムフック
 │   │   ├── config/       # 設定ファイル
 │   │   ├── constants/    # 定数定義
@@ -46,9 +46,7 @@ legal_api/
 
 ### フロントエンド（React）
 - コンポーネント命名: PascalCase
-- ファイル命名: 
-  - コンポーネント: `.jsx`
-  - その他: `.js`
+- ファイル命名: PascalCase.tsx
 - スタイル: CSS Modules（`.module.css`）
 - テスト: `.test.jsx` or `.test.js`
 - 機能モジュール構造:
@@ -126,3 +124,73 @@ legal_api/
 - 依存関係の更新:
   - パッケージの更新は定期的に実施
   - メジャーバージョンの更新は慎重に検討
+
+# プロジェクト設定
+PROJECT_TYPE=vite
+FRONTEND_FRAMEWORK=react
+UI_FRAMEWORK=tailwindcss
+DATABASE=supabase
+NODE_VERSION=18.x
+
+# ディレクトリ構造
+```
+legal_api/
+├── frontend/              # Viteフロントエンド
+│   ├── src/
+│   │   ├── features/     # 機能モジュール
+│   │   ├── components/   # 共通コンポーネント
+│   │   ├── services/     # APIサービス
+│   │   ├── routes/       # ルーティング
+│   │   ├── hooks/        # カスタムフック
+│   │   ├── config/       # 設定ファイル
+│   │   ├── constants/    # 定数定義
+│   │   ├── assets/       # 静的ファイル
+│   │   ├── tests/        # テストファイル
+│   │   └── utils/        # ユーティリティ関数
+│   ├── public/           # 静的ファイル
+│   └── docs/             # フロントエンド関連ドキュメント
+└── docs/                 # プロジェクト全体のドキュメント
+
+# 技術スタック
+- フロントエンド: React + TypeScript + Vite
+- UIフレームワーク: TailwindCSS
+- データベース: Supabase
+- 状態管理: React Query
+- ルーティング: React Router
+- テスト: Vitest + Testing Library
+- コード品質: ESLint + Prettier
+
+# 開発環境
+- Node.js: 18.x
+- パッケージマネージャー: pnpm
+- エディタ: VSCode
+
+# 必要な環境変数
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# ルーティング設定
+- /                       # ホーム
+- /projects              # プロジェクト一覧
+- /projects/:id          # プロジェクト詳細
+- /zone-search/:id       # 用途地域検索
+
+# コンポーネント命名規則
+- コンポーネント: PascalCase
+- ファイル: PascalCase.tsx
+- フック: camelCase (use prefix)
+- ユーティリティ: camelCase
+
+# スタイリング規則
+- TailwindCSSクラス名の順序:
+  1. レイアウト (display, position)
+  2. スペーシング (margin, padding)
+  3. サイズ (width, height)
+  4. 見た目 (colors, borders)
+  5. その他
+
+# APIエンドポイント
+- GET /api/projects/:id
+- GET /api/projects/:id/legal-info
+- POST /api/projects/:id/legal-info
+- GET /api/zone-search?address=:address

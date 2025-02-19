@@ -396,132 +396,114 @@ sequenceDiagram
 ### 6.1 コンポーネント構成
 ```mermaid
 graph TD
-    A[ProjectDetail] -->|用途地域検索ボタン| B[ZoneSearch]
-    B --> C[SearchBar]
-    B --> D[ZenrinMap]
-    B --> E[ZoneInfoDisplay]
-    B --> F[SaveToProjectButton]
+    A[プロジェクト詳細画面] -->|用途地域検索ボタン| B[用途地域検索画面 /map-search/1]
     
     subgraph "プロジェクト詳細画面"
-        A --> G[基本情報]
-        A --> H[LegalInfoEditor]
-        H --> I[ZoneTypeForm]
-        H --> J[BuildingRestrictionsEditor]
-        H --> K[RegulationsEditor]
+        A --> C[基本情報表示]
+        A --> D[法令情報表示]
+        D --> D1[用途地域情報]
+        D --> D2[建築制限情報]
+        D --> D3[条例・告示情報]
     end
     
-    subgraph "共通コンポーネント"
-        L[共通モジュール] --> M[constants]
-        M --> M1[zoneTypes]
-        M --> M2[firePreventionTypes]
-        M --> M3[heightDistricts]
-        M --> M4[areaClassifications]
-        
-        L --> N[utils]
-        N --> N1[validators]
-        N --> N2[calculators]
-        
-        L --> O[hooks]
-        O --> O1[useCalculation]
-        O --> O2[useValidation]
+    subgraph "用途地域検索画面"
+        B --> E[用途地域検索フォーム]
+        B --> F[検索結果表示]
+        F --> F1[用途地域情報]
+        F --> F2[建築制限情報]
+        F --> F3[条例・告示情報]
+        B --> G[プロジェクトに保存ボタン]
     end
+
+    G -->|保存| A
 ```
 
-### 6.2 データフロー
+### 6.2 画面遷移フロー
+
 ```mermaid
 sequenceDiagram
-    participant UI as ユーザーインターフェース
-    participant Form as フォームコンポーネント
-    participant Validator as バリデーション
-    participant Calculator as 計算ロジック
+    participant PD as プロジェクト詳細画面
+    participant ZS as 用途地域検索画面
     participant API as APIサービス
-    
-    UI->>Form: フォーム入力
-    Form->>Validator: 入力値検証
-    Validator-->>Form: 検証結果
-    Form->>Calculator: 計算リクエスト
-    Calculator->>Calculator: パラメータ検証
-    Calculator->>Calculator: 建築制限計算
-    Calculator-->>Form: 計算結果
-    Form->>API: データ保存
-    API-->>UI: 保存完了通知
+    participant DB as データベース
+
+    PD->>ZS: 用途地域検索ボタンクリック
+    ZS->>API: 用途地域情報取得
+    API-->>ZS: 用途地域・法令情報
+    ZS->>ZS: 情報表示
+    ZS->>API: プロジェクトに保存
+    API->>DB: 法令情報保存
+    DB-->>API: 保存完了
+    API-->>ZS: 保存成功レスポンス
+    ZS->>PD: プロジェクト詳細画面に遷移
+    PD->>API: 最新の法令情報取得
+    API-->>PD: 更新された法令情報表示
 ```
 
-### 6.3 状態管理フロー
+### 6.3 データベース構造
 
-```mermaid
-stateDiagram-v2
-    [*] --> プロジェクト詳細表示
-    プロジェクト詳細表示 --> 基本情報編集: 編集ボタン
-    プロジェクト詳細表示 --> 削除確認: 削除ボタン
-    プロジェクト詳細表示 --> 用途地域検索: 用途地域検索ボタン
-    プロジェクト詳細表示 --> 地図検索: 地図から検索ボタン
-    
-    基本情報編集 --> プロジェクト詳細表示: 保存/キャンセル
-    削除確認 --> プロジェクト詳細表示: キャンセル
-    削除確認 --> プロジェクト一覧: 削除確定
-    
-    用途地域検索 --> 法令情報確認: 検索実行
-    地図検索 --> 法令情報確認: 地点選択
-    法令情報確認 --> 法令情報保存確認: 保存ボタン
-    法令情報保存確認 --> プロジェクト詳細表示: 保存完了
+```sql
+-- プロジェクト
+CREATE TABLE projects (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    location TEXT,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 法令情報
+CREATE TABLE legal_info (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id),
+    zone_type VARCHAR(100) NOT NULL,
+    fire_prevention VARCHAR(100),
+    coverage_ratio INTEGER,
+    floor_area_ratio INTEGER,
+    height_district VARCHAR(100),
+    area_classification VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 建築制限情報
+CREATE TABLE building_restrictions (
+    id SERIAL PRIMARY KEY,
+    legal_info_id INTEGER REFERENCES legal_info(id),
+    restriction_type VARCHAR(100),
+    allowed_uses JSONB,
+    restrictions JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 条例・告示情報
+CREATE TABLE regulations (
+    id SERIAL PRIMARY KEY,
+    legal_info_id INTEGER REFERENCES legal_info(id),
+    regulation_type VARCHAR(100),
+    content TEXT,
+    effective_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-### 6.4 データ構造
+### 6.4 API エンドポイント
 
-```json
-{
-  "project": {
-    "id": 1,
-    "name": "丸の内プロジェクト",
-    "location": "東京都千代田区丸の内",
-    "start_date": "2024-04-01",
-    "end_date": "2025-03-31",
-    "description": "丸の内エリアの再開発プロジェクト",
-    "status": "planning"
-  },
-  "legalInfo": {
-    "location": {
-      "address": "東京都千代田区丸の内1-1-1",
-      "coordinates": {
-        "latitude": 35.681236,
-        "longitude": 139.767125
-      }
-    },
-    "zoning_info": {
-      "zone_type": "商業地域",
-      "fire_prevention": "防火地域",
-      "coverage_ratio": 80,
-      "floor_area_ratio": 400,
-      "building_area": 800,
-      "total_floor_area": 3200,
-      "height_district": "第三種高度地区",
-      "area_classification": "市街化区域",
-      "scenic_district": null
-    },
-    "building_restrictions": {
-      "building_standard_law_48": {
-        "allowed_uses": ["事務所", "店舗", "共同住宅"],
-        "restrictions": []
-      },
-      "law_appendix_2": {
-        "category": "第二種",
-        "restrictions": []
-      }
-    },
-    "regulations": {
-      "notifications": [{
-        "notification_id": "412K500040001453",
-        "content": "...",
-        "effective_date": "2024-01-01"
-      }],
-      "tokyo_building_safety": {
-        "article_numbers": ["第30条", "第31条"],
-        "content": "..."
-      }
-    }
-  }
-}
+```markdown
+# API Endpoints
+
+## プロジェクト関連
+GET    /api/v1/projects/:id              # プロジェクト詳細取得
+PUT    /api/v1/projects/:id              # プロジェクト更新
+
+## 法令情報関連
+GET    /api/v1/projects/:id/legal-info   # プロジェクトの法令情報取得
+POST   /api/v1/projects/:id/legal-info   # 法令情報保存
+PUT    /api/v1/legal-info/:id            # 法令情報更新
+
+## 用途地域検索
+GET    /api/v1/zone-search               # 用途地域情報検索
 ```
 
 ## 7. 建築計算機能
@@ -632,7 +614,6 @@ sequenceDiagram
     A->>D: データ保存
     D-->>A: 保存完了
     A-->>Z: 保存完了レスポンス
-    Z-->>U: 結果表示
 ```
 
 ### 7.5 入力フォームの更新
