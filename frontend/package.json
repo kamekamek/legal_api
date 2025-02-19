@@ -12,12 +12,14 @@
     "@mui/material": "^5.15.10",
     "@supabase/supabase-js": "^2.48.1",
     "axios": "^1.7.9",
+    "formik": "^2.4.6",
     "leaflet": "^1.9.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-leaflet": "^4.2.1",
     "react-router-dom": "^6.22.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "yup": "^1.6.1"
   },
   "scripts": {
     "dev": "vite",
@@ -51,7 +53,7 @@
     "@babel/preset-react": "^7.26.3",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "latest",

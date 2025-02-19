@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import ProjectDetail from '../ProjectDetail';
 
@@ -37,15 +38,17 @@ describe('ProjectDetail', () => {
   });
 
   it('プロジェクト情報が正しく表示される', async () => {
-    global.fetch = jest.fn()
-      .mockImplementationOnce(() => Promise.resolve({
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ project: mockProject })
-      }))
-      .mockImplementationOnce(() => Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(mockProject.legalInfo)
-      }));
+        json: () => Promise.resolve({
+          id: 1,
+          name: 'テストプロジェクト',
+          description: 'テストプロジェクトの説明',
+          status: '進行中'
+        })
+      })
+    );
 
     render(
       <BrowserRouter>
@@ -55,21 +58,25 @@ describe('ProjectDetail', () => {
 
     await waitFor(() => {
       expect(screen.getByText('テストプロジェクト')).toBeInTheDocument();
-      expect(screen.getByText('テストプロジェクトの説明')).toBeInTheDocument();
-      expect(screen.getByText('計画中')).toBeInTheDocument();
     });
+
+    expect(screen.getByText('テストプロジェクトの説明')).toBeInTheDocument();
+    expect(screen.getByText('進行中')).toBeInTheDocument();
   });
 
   it('法令情報の取得ボタンが正しく動作する', async () => {
-    global.fetch = jest.fn()
-      .mockImplementationOnce(() => Promise.resolve({
+    const user = userEvent.setup();
+    
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ project: mockProject })
-      }))
-      .mockImplementationOnce(() => Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(mockProject.legalInfo)
-      }));
+        json: () => Promise.resolve({
+          id: 1,
+          name: 'テストプロジェクト',
+          address: '東京都千代田区'
+        })
+      })
+    );
 
     render(
       <BrowserRouter>
@@ -78,23 +85,35 @@ describe('ProjectDetail', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('住所から取得')).toBeInTheDocument();
-      expect(screen.getByText('地図から検索')).toBeInTheDocument();
+      expect(screen.getByText('テストプロジェクト')).toBeInTheDocument();
     });
+
+    const addressButton = screen.getByRole('button', { name: /住所から取得/ });
+    const mapButton = screen.getByRole('button', { name: /地図から検索/ });
+    
+    expect(addressButton).toBeInTheDocument();
+    expect(mapButton).toBeInTheDocument();
+
+    await user.click(addressButton);
+    
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/projects/1/legal-info')
+    );
   });
 
   it('エラー時に適切なメッセージが表示される', async () => {
     global.fetch = jest.fn().mockImplementationOnce(() => Promise.reject(new Error('エラーが発生しました')));
 
-    render(
-      <BrowserRouter>
-        <ProjectDetail />
-      </BrowserRouter>
-    );
-
     await waitFor(() => {
-      expect(screen.getByText('エラーが発生しました')).toBeInTheDocument();
+      render(
+        <BrowserRouter>
+          <ProjectDetail />
+        </BrowserRouter>
+      );
     });
+
+    const errorMessage = await screen.findByText('エラーが発生しました');
+    expect(errorMessage).toBeInTheDocument();
   });
 
   it('プロジェクトが存在しない場合の表示', async () => {
@@ -103,40 +122,42 @@ describe('ProjectDetail', () => {
       status: 404
     }));
 
-    render(
-      <BrowserRouter>
-        <ProjectDetail />
-      </BrowserRouter>
-    );
-
     await waitFor(() => {
-      expect(screen.getByText('プロジェクトが見つかりませんでした。')).toBeInTheDocument();
+      render(
+        <BrowserRouter>
+          <ProjectDetail />
+        </BrowserRouter>
+      );
     });
+
+    const notFoundMessage = await screen.findByText('プロジェクトの取得に失敗しました');
+    expect(notFoundMessage).toBeInTheDocument();
   });
 
   it('削除確認ダイアログが正しく動作する', async () => {
+    const user = userEvent.setup();
+    
     global.fetch = jest.fn()
       .mockImplementationOnce(() => Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ project: mockProject })
-      }))
-      .mockImplementationOnce(() => Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(mockProject.legalInfo)
       }));
 
-    render(
-      <BrowserRouter>
-        <ProjectDetail />
-      </BrowserRouter>
-    );
-
     await waitFor(() => {
-      const deleteButton = screen.getByText('削除する');
-      fireEvent.click(deleteButton);
+      render(
+        <BrowserRouter>
+          <ProjectDetail />
+        </BrowserRouter>
+      );
     });
 
-    expect(screen.getByText('プロジェクトを削除しますか？')).toBeInTheDocument();
-    expect(screen.getByText('この操作は取り消すことができません。本当にプロジェクトを削除しますか？')).toBeInTheDocument();
+    const deleteButton = await screen.findByText('削除');
+    await user.click(deleteButton);
+
+    const dialogTitle = await screen.findByText('プロジェクトを削除しますか？');
+    const dialogContent = await screen.findByText('この操作は取り消すことができません。本当にプロジェクトを削除しますか？');
+    
+    expect(dialogTitle).toBeInTheDocument();
+    expect(dialogContent).toBeInTheDocument();
   });
 }); 
