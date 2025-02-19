@@ -393,78 +393,58 @@ sequenceDiagram
 
 ## 6. プロジェクト詳細画面
 
-### 6.1 実装済みコンポーネント構成
-
+### 6.1 コンポーネント構成
 ```mermaid
 graph TD
-    A[ProjectDetail] --> B[基本情報セクション]
-    A --> C[法令情報セクション]
+    A[ProjectDetail] -->|用途地域検索ボタン| B[ZoneSearch]
+    B --> C[SearchBar]
+    B --> D[ZenrinMap]
+    B --> E[ZoneInfoDisplay]
+    B --> F[SaveToProjectButton]
     
-    subgraph "基本情報セクション"
-        B --> D[プロジェクト名]
-        B --> E[ステータスチップ]
-        B --> F[所在地]
-        B --> G[期間]
-        B --> H[説明]
-        B --> I[操作ボタン]
-        I --> J[編集ボタン]
-        I --> K[削除ボタン]
+    subgraph "プロジェクト詳細画面"
+        A --> G[基本情報]
+        A --> H[LegalInfoEditor]
+        H --> I[ZoneTypeForm]
+        H --> J[BuildingRestrictionsEditor]
+        H --> K[RegulationsEditor]
     end
     
-    subgraph "法令情報セクション"
-        C --> L[所在地情報]
-        C --> M[用途地域情報]
-        M --> M1[用途地域]
-        M --> M2[防火地域]
-        M --> M3[建蔽率・容積率]
-        M --> M4[建築面積]
-        M --> M5[延べ床面積]
-        M --> M6[高度地区]
-        M --> M7[区域区分]
-        M --> M8[風致地区]
-        C --> N[建築制限情報]
-        N --> N1[建築基準法48条]
-        N --> N2[法別表第2]
-        C --> O[条例・告示情報]
-        O --> O1[告示一覧]
-        O --> O2[建築安全条例]
-        C --> P[操作ボタン]
-        P --> Q[用途地域検索]
-        P --> R[地図から検索]
+    subgraph "共通コンポーネント"
+        L[共通モジュール] --> M[constants]
+        M --> M1[zoneTypes]
+        M --> M2[firePreventionTypes]
+        M --> M3[heightDistricts]
+        M --> M4[areaClassifications]
+        
+        L --> N[utils]
+        N --> N1[validators]
+        N --> N2[calculators]
+        
+        L --> O[hooks]
+        O --> O1[useCalculation]
+        O --> O2[useValidation]
     end
 ```
 
-### 6.2 追加予定のコンポーネント
-
+### 6.2 データフロー
 ```mermaid
-graph TD
-    A[ProjectDetail] --> B[LegalInfoEditor]
-    A --> C[MapViewer]
+sequenceDiagram
+    participant UI as ユーザーインターフェース
+    participant Form as フォームコンポーネント
+    participant Validator as バリデーション
+    participant Calculator as 計算ロジック
+    participant API as APIサービス
     
-    subgraph "法令情報編集"
-        B --> D[LocationEditor]
-        B --> E[ZoningInfoEditor]
-        B --> F[BuildingRestrictionsEditor]
-        B --> G[RegulationsEditor]
-        
-        E --> E1[ZoneTypeSelect]
-        E --> E2[FirePreventionSelect]
-        E --> E3[RatioInputs]
-        E --> E4[DistrictInputs]
-        
-        F --> F1[Law48Editor]
-        F --> F2[LawAppendixEditor]
-        
-        G --> G1[NotificationEditor]
-        G --> G2[SafetyOrdinanceEditor]
-    end
-    
-    subgraph "地図表示"
-        C --> H[ZenrinMap]
-        C --> I[ZoneOverlay]
-        C --> J[LocationMarker]
-        C --> K[MapControls]
-    end
+    UI->>Form: フォーム入力
+    Form->>Validator: 入力値検証
+    Validator-->>Form: 検証結果
+    Form->>Calculator: 計算リクエスト
+    Calculator->>Calculator: パラメータ検証
+    Calculator->>Calculator: 建築制限計算
+    Calculator-->>Form: 計算結果
+    Form->>API: データ保存
+    API-->>UI: 保存完了通知
 ```
 
 ### 6.3 状態管理フロー
