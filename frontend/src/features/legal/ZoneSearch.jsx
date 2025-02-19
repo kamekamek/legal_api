@@ -38,8 +38,8 @@ import {
   ZONE_DIVISION_MAPPING
 } from '../../constants/zoneTypes';
 
-// 告示文ダイアログコンポーネント
-const KokujiDialog = ({ open, onClose, kokujiText }) => {
+// 告示文ダイアログコンポーネントを汎用的な法令テキストダイアログに変更
+const LegalTextDialog = ({ open, onClose, title, content }) => {
   return (
     <Dialog
       open={open}
@@ -55,7 +55,7 @@ const KokujiDialog = ({ open, onClose, kokujiText }) => {
       }}
     >
       <DialogTitle>
-        告示文
+        {title}
         <IconButton
           aria-label="close"
           onClick={onClose}
@@ -73,7 +73,7 @@ const KokujiDialog = ({ open, onClose, kokujiText }) => {
           overflowY: 'auto',
           padding: 2
         }}>
-          {kokujiText}
+          {content}
         </Box>
       </DialogContent>
     </Dialog>
@@ -170,6 +170,20 @@ const LoadingOverlay = ({ message }) => (
 // sleepユーティリティ関数の追加
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+const fetchBuildingRegulations = async (youtoType) => {
+  try {
+    const response = await axios.get('https://script.google.com/macros/s/AKfycbxI3QyrADAp4PbSssg1QFbdlgQEYOVFrnmCjCjc9I55QOTJHz3LHLzTCUAsDhfvTAH8ng/exec', {
+      params: {
+        targetArea: YOUTO_MAPPING[youtoType]
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('建築規制情報の取得に失敗しました:', error);
+    throw error;
+  }
+};
+
 const ZoneSearch = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -181,7 +195,11 @@ const ZoneSearch = () => {
   const [youtoVisible, setYoutoVisible] = useState(false);
   const [currentZoom, setCurrentZoom] = useState(17);
   const [kokujiText, setKokujiText] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogState, setDialogState] = useState({
+    open: false,
+    title: '',
+    content: ''
+  });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -195,6 +213,7 @@ const ZoneSearch = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const debounceTimeout = useRef(null);
+  const [buildingRegulations, setBuildingRegulations] = useState(null);
 
   // APIリクエストの最適化
   const fetchWithCache = async (key, fetchFn) => {
@@ -340,6 +359,17 @@ const ZoneSearch = () => {
 
       if (response.data) {
         setLandUseInfo(response.data);
+        
+        // 用途地域情報が取得できた場合、建築規制情報も取得
+        if (response.data.type) {
+          try {
+            const regulations = await fetchBuildingRegulations(response.data.type);
+            setBuildingRegulations(regulations);
+          } catch (error) {
+            console.error('建築規制情報の取得に失敗しました:', error);
+            setError('建築規制情報の取得に失敗しました');
+          }
+        }
         
         // 固定の告示ID「412K500040001453」で告示文を取得する
         try {
@@ -736,6 +766,22 @@ const ZoneSearch = () => {
     overflowY: 'auto'
   };
 
+  const handleOpenDialog = (title, content) => {
+    setDialogState({
+      open: true,
+      title,
+      content
+    });
+  };
+
+  const handleCloseDialog = () => {
+    setDialogState({
+      open: false,
+      title: '',
+      content: ''
+    });
+  };
+
   return (
     <Container maxWidth="xl" sx={{ height: '100vh', p: 0 }}>
       <Box sx={{ 
@@ -955,15 +1001,43 @@ const ZoneSearch = () => {
                           scenic.type && `第${scenic.type}種`
                         ].filter(Boolean).join(' ');
                       })()} />
-                      <InfoRow label="建築基準法48条" value="準備中" />
-                      <InfoRow label="法別表第２" value="準備中" />
+                      <InfoRow 
+                        label="建築基準法48条" 
+                        value={
+                          buildingRegulations ? (
+                            <Button
+                              variant="contained"
+                              onClick={() => handleOpenDialog('建築基準法48条', buildingRegulations['建築基準法第48条本文'])}
+                              size="small"
+                              sx={{ ml: 'auto' }}
+                            >
+                              条文を表示
+                            </Button>
+                          ) : '取得中...'
+                        } 
+                      />
+                      <InfoRow 
+                        label="法別表第２" 
+                        value={
+                          buildingRegulations ? (
+                            <Button
+                              variant="contained"
+                              onClick={() => handleOpenDialog('法別表第2', buildingRegulations['法別表第2本文'])}
+                              size="small"
+                              sx={{ ml: 'auto' }}
+                            >
+                              条文を表示
+                            </Button>
+                          ) : '取得中...'
+                        } 
+                      />
                       <InfoRow 
                         label="告示文" 
                         value={
                           kokujiText ? (
                             <Button
                               variant="contained"
-                              onClick={() => setDialogOpen(true)}
+                              onClick={() => handleOpenDialog('告示文', kokujiText)}
                               size="small"
                               sx={{ ml: 'auto' }}
                             >
@@ -999,11 +1073,12 @@ const ZoneSearch = () => {
           </Alert>
         </Snackbar>
 
-        {/* 告示文ダイアログ */}
-        <KokujiDialog
-          open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
-          kokujiText={kokujiText}
+        {/* 法令テキストダイアログ */}
+        <LegalTextDialog
+          open={dialogState.open}
+          onClose={handleCloseDialog}
+          title={dialogState.title}
+          content={dialogState.content}
         />
       </Box>
     </Container>
