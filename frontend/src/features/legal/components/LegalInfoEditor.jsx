@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Paper, Typography, Grid, TextField, MenuItem, Button, Tabs, Tab } from '@mui/material';
+import { Box, Paper, Typography, Grid, TextField, MenuItem, Button, Tabs, Tab, Alert } from '@mui/material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 import { BuildingRestrictionsEditor } from './BuildingRestrictionsEditor';
@@ -61,6 +61,7 @@ export const LegalInfoEditor = ({ initialData, onSave, onCancel }) => {
   const [calculating, setCalculating] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [buildingRestrictions, setBuildingRestrictions] = useState(initialData?.buildingRestrictions || {});
+  const [calculationError, setCalculationError] = useState(null);
 
   const formik = useFormik({
     initialValues: {
@@ -76,6 +77,7 @@ export const LegalInfoEditor = ({ initialData, onSave, onCancel }) => {
     validationSchema,
     onSubmit: async (values) => {
       setCalculating(true);
+      console.log('フォーム送信開始 - 元の値:', values);
       try {
         const processedValues = {
           ...values,
@@ -84,15 +86,36 @@ export const LegalInfoEditor = ({ initialData, onSave, onCancel }) => {
           siteArea: values.siteArea ? Number(values.siteArea) : undefined,
           roadWidth: values.roadWidth ? Number(values.roadWidth) : undefined,
         };
+        console.log('数値変換後の値:', processedValues);
         
+        // 数値変換の検証
+        const numberValidation = {
+          coverageRatio: !isNaN(processedValues.coverageRatio),
+          floorAreaRatio: !isNaN(processedValues.floorAreaRatio),
+          siteArea: processedValues.siteArea === undefined || !isNaN(processedValues.siteArea),
+          roadWidth: processedValues.roadWidth === undefined || !isNaN(processedValues.roadWidth),
+        };
+        console.log('数値変換の検証結果:', numberValidation);
+
+        if (Object.values(numberValidation).some(valid => !valid)) {
+          throw new Error('数値変換に失敗しました');
+        }
+
         const calculatedValues = await calculateBuildingLimits(processedValues);
-        onSave({
+        console.log('計算完了 - 結果:', calculatedValues);
+        
+        const finalValues = {
           ...processedValues,
           calculations: calculatedValues,
           buildingRestrictions,
-        });
+        };
+        console.log('保存する最終データ:', finalValues);
+        
+        onSave(finalValues);
       } catch (error) {
         console.error('計算エラー:', error);
+        // エラー状態をUIに反映
+        setCalculationError(error.message);
       } finally {
         setCalculating(false);
       }
@@ -102,6 +125,20 @@ export const LegalInfoEditor = ({ initialData, onSave, onCancel }) => {
   const calculateBuildingLimits = async (values) => {
     console.log('計算開始:', values);
     const { siteArea, coverageRatio, floorAreaRatio, roadWidth, zoneType } = values;
+    
+    // 必須パラメータの存在チェック
+    const requiredParams = {
+      siteArea: siteArea !== undefined && siteArea !== '',
+      coverageRatio: coverageRatio !== undefined && coverageRatio !== '',
+      floorAreaRatio: floorAreaRatio !== undefined && floorAreaRatio !== '',
+      roadWidth: roadWidth !== undefined && roadWidth !== '',
+      zoneType: zoneType !== undefined && zoneType !== '',
+    };
+    console.log('必須パラメータチェック:', requiredParams);
+
+    if (Object.values(requiredParams).some(param => !param)) {
+      throw new Error('必須パラメータが不足しています');
+    }
     
     try {
       // 入力値の検証
@@ -159,6 +196,12 @@ export const LegalInfoEditor = ({ initialData, onSave, onCancel }) => {
         <Typography variant="h6" gutterBottom>
           法令情報編集
         </Typography>
+
+        {calculationError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            計算エラー: {calculationError}
+          </Alert>
+        )}
 
         <Tabs
           value={activeTab}
