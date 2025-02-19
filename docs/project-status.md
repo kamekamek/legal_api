@@ -446,3 +446,99 @@ graph TD
         E --> E2[建築安全条例]
     end
 ``` 
+
+## 進行中の機能実装
+
+### 法令情報管理機能
+
+**状態**: 実装中
+**優先度**: 高
+**担当**: 未割り当て
+
+#### 概要
+プロジェクトごとの法令情報（用途地域、建蔽率、容積率など）と告示文を管理する機能を実装します。
+
+#### 実装項目
+
+1. バックエンド
+   - [x] API仕様の策定
+   - [ ] データベーススキーマの設計
+     - [ ] 法令情報テーブル
+     - [ ] 告示文テーブル
+     - [ ] プロジェクト関連テーブル
+   - [ ] モデルの実装
+     - [ ] LegalInfo モデル
+     - [ ] Kokuji モデル
+   - [ ] APIエンドポイントの実装
+     - [ ] 法令情報API
+     - [ ] 告示文API
+   - [ ] バリデーションの実装
+   - [ ] テストの実装
+
+2. フロントエンド
+   - [x] 用途地域検索画面の実装
+   - [x] 法令情報表示コンポーネントの実装
+   - [x] 告示文表示ダイアログの実装
+   - [ ] APIクライアントの実装
+     - [ ] 法令情報API
+     - [ ] 告示文API
+   - [ ] プロジェクト詳細画面との連携
+   - [ ] テストの実装
+
+#### 告示文機能の詳細
+
+1. データベース
+   ```sql
+   -- 告示文テーブル
+   CREATE TABLE kokuji (
+       id SERIAL PRIMARY KEY,
+       kokuji_id VARCHAR(100) NOT NULL UNIQUE,
+       title TEXT NOT NULL,
+       kokuji_text TEXT NOT NULL,
+       effective_date DATE,
+       category VARCHAR(100),
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   );
+
+   -- プロジェクトと告示文の関連テーブル
+   CREATE TABLE project_kokuji (
+       id SERIAL PRIMARY KEY,
+       project_id INTEGER REFERENCES projects(id),
+       kokuji_id VARCHAR(100) REFERENCES kokuji(kokuji_id),
+       memo TEXT,
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       UNIQUE(project_id, kokuji_id)
+   );
+   ```
+
+2. API実装
+   - GET /api/v1/kokuji/:kokujiId
+   - GET /api/v1/projects/:id/kokuji
+   - POST /api/v1/projects/:id/kokuji
+
+3. フロントエンド実装
+   - 告示文表示ダイアログ
+   - 告示文一覧表示
+   - プロジェクトへの関連付け機能
+
+#### 技術スタック
+- バックエンド: Express.js, Supabase
+- フロントエンド: React, TypeScript
+- テスト: Jest, React Testing Library
+
+#### タイムライン
+- API仕様策定: 完了
+- バックエンド実装: 未着手
+- フロントエンド実装: 進行中
+- テスト実装: 未着手
+- デプロイ: 未着手
+
+#### 次のステップ
+1. データベーススキーマの設計と実装
+2. バックエンドAPIの実装
+3. フロントエンドとの連携テスト
+4. E2Eテストの実装
+
+## その他の機能
+
+[既存の内容をここに保持]
