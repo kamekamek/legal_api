@@ -1,8 +1,9 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import ProjectDetail from '../ProjectDetail';
+import userEvent from '@testing-library/user-event';
 
 // モックの設定
 jest.mock('react-router-dom', () => ({
@@ -30,6 +31,7 @@ const mockLegalInfo = {
 describe('ProjectDetail', () => {
   beforeEach(() => {
     global.fetch = jest.fn();
+    jest.resetAllMocks();
   });
 
   const renderProjectDetail = () => {
@@ -163,5 +165,30 @@ describe('ProjectDetail', () => {
     await waitFor(() => {
       expect(screen.getByText('プロジェクトの取得に失敗しました')).toBeInTheDocument();
     });
+  });
+
+  test('法令情報の取得ボタンが正しく動作する', async () => {
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ data: {} }),
+      })
+    );
+
+    await act(async () => {
+      renderProjectDetail();
+    });
+
+    const addressButton = screen.getByRole('button', { name: '住所から取得' });
+    const mapButton = screen.getByRole('button', { name: '地図から検索' });
+
+    expect(addressButton).toBeInTheDocument();
+    expect(mapButton).toBeInTheDocument();
+
+    await act(async () => {
+      await userEvent.click(addressButton);
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/api/legal-info'));
   });
 }); 

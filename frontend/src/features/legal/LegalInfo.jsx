@@ -17,7 +17,15 @@ const LegalInfo = ({ projectData, onUpdate }) => {
   const zoneInfo = parseZoneMap(projectData?.zoneMap);
   const heightInfo = parseHeightDistrict(projectData?.heightDistrict);
 
+  console.log('LegalInfo render:', {
+    projectData,
+    zoneInfo,
+    heightInfo,
+    isEditing
+  });
+
   const handleSave = async (updatedData) => {
+    console.log('handleSave called with:', updatedData);
     try {
       await onUpdate(updatedData);
       setIsEditing(false);

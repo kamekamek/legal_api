@@ -100,26 +100,53 @@ export const LegalInfoEditor = ({ initialData, onSave, onCancel }) => {
   });
 
   const calculateBuildingLimits = async (values) => {
+    console.log('計算開始:', values);
     const { siteArea, coverageRatio, floorAreaRatio, roadWidth, zoneType } = values;
     
-    // 建築可能面積の計算
-    const buildableArea = (siteArea * coverageRatio) / 100;
-    
-    // 道路幅員による制限値の計算
-    const roadWidthLimit = zoneType.includes('住居') 
-      ? roadWidth * 0.4 * 100
-      : roadWidth * 0.6 * 100;
-    
-    // 制限値と指定容積率の小さい方を採用
-    const effectiveFloorAreaRatio = Math.min(floorAreaRatio, roadWidthLimit);
-    const totalFloorArea = (siteArea * effectiveFloorAreaRatio) / 100;
+    try {
+      // 入力値の検証
+      console.log('入力値の型:', {
+        siteArea: typeof siteArea,
+        coverageRatio: typeof coverageRatio,
+        floorAreaRatio: typeof floorAreaRatio,
+        roadWidth: typeof roadWidth
+      });
 
-    return {
-      buildableArea,
-      totalFloorArea,
-      roadWidthLimit,
-      effectiveFloorAreaRatio,
-    };
+      // 建築可能面積の計算
+      const buildableArea = (siteArea * coverageRatio) / 100;
+      console.log('建築可能面積計算結果:', buildableArea);
+      
+      // 道路幅員による制限値の計算
+      const roadWidthLimit = zoneType.includes('住居') 
+        ? roadWidth * 0.4 * 100
+        : roadWidth * 0.6 * 100;
+      console.log('道路幅員制限計算結果:', roadWidthLimit);
+      
+      // 制限値と指定容積率の小さい方を採用
+      const effectiveFloorAreaRatio = Math.min(floorAreaRatio, roadWidthLimit);
+      const totalFloorArea = (siteArea * effectiveFloorAreaRatio) / 100;
+      console.log('最終計算結果:', {
+        effectiveFloorAreaRatio,
+        totalFloorArea
+      });
+
+      return {
+        buildableArea,
+        totalFloorArea,
+        roadWidthLimit,
+        effectiveFloorAreaRatio,
+      };
+    } catch (error) {
+      console.error('計算処理エラー:', error);
+      console.error('エラー発生時の値:', {
+        siteArea,
+        coverageRatio,
+        floorAreaRatio,
+        roadWidth,
+        zoneType
+      });
+      throw error;
+    }
   };
 
   const handleBuildingRestrictionsChange = (restrictions) => {
