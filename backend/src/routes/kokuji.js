@@ -20,7 +20,7 @@ router.get('/kokuji/:kokujiId', async (req, res) => {
   try {
     const { kokujiId } = req.params;
     const result = await pool.query(
-      'SELECT * FROM kokuji WHERE kokuji_id = $1',
+      'SELECT kokuji_id, kokuji_text FROM kokuji WHERE kokuji_id = $1',
       [kokujiId]
     );
     
@@ -28,7 +28,7 @@ router.get('/kokuji/:kokujiId', async (req, res) => {
       return res.status(404).json({ error: '告示文が見つかりません' });
     }
     
-    res.json(result.rows[0]);
+    res.json({ data: result.rows[0] });
   } catch (err) {
     console.error('Error getting kokuji:', err);
     res.status(500).json({ error: '告示文の取得に失敗しました' });
@@ -40,11 +40,10 @@ router.get('/projects/:projectId/kokuji', async (req, res) => {
   try {
     const { projectId } = req.params;
     const result = await pool.query(
-      `SELECT k.* 
+      `SELECT k.kokuji_id, k.kokuji_text 
        FROM kokuji k
        JOIN project_kokuji pk ON k.kokuji_id = pk.kokuji_id
-       WHERE pk.project_id = $1
-       ORDER BY k.effective_date DESC`,
+       WHERE pk.project_id = $1`,
       [projectId]
     );
     res.json({ data: result.rows });
@@ -59,7 +58,7 @@ router.post('/projects/:projectId/kokuji', async (req, res) => {
   const client = await pool.connect();
   try {
     const { projectId } = req.params;
-    const { kokujiId, memo } = req.body;
+    const { kokujiId, kokujiText } = req.body;
 
     await client.query('BEGIN');
 
@@ -72,19 +71,18 @@ router.post('/projects/:projectId/kokuji', async (req, res) => {
       throw new Error('プロジェクトが存在しません');
     }
 
-    // 告示文の存在確認
-    const kokujiExists = await client.query(
-      'SELECT kokuji_id FROM kokuji WHERE kokuji_id = $1',
-      [kokujiId]
+    // 告示文が存在しない場合は新規作成
+    await client.query(
+      `INSERT INTO kokuji (kokuji_id, kokuji_text)
+       VALUES ($1, $2)
+       ON CONFLICT (kokuji_id) DO NOTHING`,
+      [kokujiId, kokujiText]
     );
-    if (kokujiExists.rows.length === 0) {
-      throw new Error('告示文が存在しません');
-    }
 
     // 関連付けを作成
     await client.query(
-      'INSERT INTO project_kokuji (project_id, kokuji_id, memo) VALUES ($1, $2, $3)',
-      [projectId, kokujiId, memo]
+      'INSERT INTO project_kokuji (project_id, kokuji_id) VALUES ($1, $2)',
+      [projectId, kokujiId]
     );
 
     await client.query('COMMIT');
