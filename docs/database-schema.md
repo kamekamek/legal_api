@@ -18,6 +18,10 @@ erDiagram
         text status "ステータス"
         date start_date "開始日"
         date end_date "終了日"
+        timestamp created_at "作成日時"
+        timestamp updated_at "更新日時"
+        uuid created_by "作成者"
+        uuid updated_by "更新者"
     }
 
     project_members {
@@ -25,6 +29,8 @@ erDiagram
         bigint project_id FK "プロジェクトID"
         uuid user_id FK "ユーザーID"
         text role "権限"
+        timestamp created_at "作成日時"
+        timestamp updated_at "更新日時"
     }
 
     legal_info {
@@ -43,14 +49,22 @@ erDiagram
         jsonb article_48 "建築基準法48条"
         jsonb appendix_2 "法別表第２"
         jsonb safety_ordinance "建築安全条例"
+        timestamp created_at "作成日時"
+        timestamp updated_at "更新日時"
+        uuid created_by "作成者"
+        uuid updated_by "更新者"
     }
 
     project_kokuji {
         bigint id PK
         bigint project_id FK "プロジェクトID"
         text kokuji_id "告示番号"
-        text content "告示本文"
+        text kokuji_text "告示本文"
         text memo "メモ"
+        timestamp created_at "作成日時"
+        timestamp updated_at "更新日時"
+        uuid created_by "作成者"
+        uuid updated_by "更新者"
     }
 
     building_calculations {
@@ -58,8 +72,17 @@ erDiagram
         bigint project_id FK "プロジェクトID"
         numeric site_area "敷地面積"
         numeric road_width "前面道路幅員"
+        numeric coverage_ratio "建ぺい率"
+        numeric floor_area_ratio "容積率"
         numeric buildable_area "建築可能面積"
         numeric total_floor_area "延べ床面積"
+        numeric road_width_limit "道路幅員制限"
+        numeric effective_ratio "実効容積率"
+        text memo "メモ"
+        timestamp created_at "作成日時"
+        timestamp updated_at "更新日時"
+        uuid created_by "作成者"
+        uuid updated_by "更新者"
     }
 
     authUsers {
@@ -131,8 +154,17 @@ erDiagram
 
 ### 建築計算 (building_calculations)
 - プロジェクトの建築計算結果を保存
-- 敷地面積や前面道路幅員などの入力値
-- 建築可能面積や延べ床面積などの計算結果
+- 入力値：
+  - 敷地面積（site_area）
+  - 前面道路幅員（road_width）
+  - 建ぺい率（coverage_ratio）
+  - 容積率（floor_area_ratio）
+- 計算結果：
+  - 建築可能面積（buildable_area）
+  - 延べ床面積（total_floor_area）
+  - 道路幅員による制限（road_width_limit）
+  - 実効容積率（effective_ratio）
+- メモ機能で計算条件や特記事項を記録可能
 - 履歴として保存され、複数の計算結果を比較可能
 
 ## 3. 主要な関連の説明
