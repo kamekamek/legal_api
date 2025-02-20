@@ -116,6 +116,86 @@ app.get('/api/landuse', async (req, res) => {
   }
 });
 
+// 告示文取得APIエンドポイント
+app.get('/api/kokuji/:kokuji_id', async (req, res) => {
+  try {
+    const { kokuji_id } = req.params;
+    console.log('告示文取得リクエスト開始:', { kokuji_id });
+
+    const response = await axios({
+      method: 'GET',
+      url: 'https://kokujiapi.azurewebsites.net/api/v1/getKokuji',
+      params: {
+        kokuji_id: kokuji_id,
+        response_format: 'plain'
+      },
+      headers: {
+        'accept': 'application/xml'
+      },
+      timeout: 10000
+    });
+
+    console.log('Azure API Response:', {
+      status: response.status,
+      contentType: response.headers['content-type'],
+      dataLength: response.data?.length
+    });
+
+    if (response.data) {
+      let kokujiText = response.data;
+      // <Law>タグの中身のみを抽出
+      const match = /<Law>([\s\S]*?)<\/Law>/g.exec(kokujiText);
+      if (match && match[1]) {
+        kokujiText = match[1].trim();
+      }
+
+      res.json({
+        status: 'success',
+        data: {
+          kokuji_text: kokujiText,
+          kokuji_id: kokuji_id,
+          updated_at: new Date().toISOString()
+        }
+      });
+    } else {
+      res.status(404).json({ 
+        status: 'error',
+        error: '告示文が見つかりませんでした',
+        kokuji_id
+      });
+    }
+  } catch (error) {
+    console.error('告示文取得エラー:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      config: error.config
+    });
+
+    if (error.response) {
+      res.status(error.response.status).json({
+        status: 'error',
+        error: '告示文の取得に失敗しました',
+        details: error.response.data,
+        kokuji_id
+      });
+    } else if (error.request) {
+      res.status(503).json({
+        status: 'error',
+        error: 'Azure APIからの応答がありません',
+        kokuji_id
+      });
+    } else {
+      res.status(500).json({
+        status: 'error',
+        error: 'サーバー内部エラー',
+        details: error.message,
+        kokuji_id
+      });
+    }
+  }
+});
+
 // 建築計算APIルーターを追加
 app.use('/api/v1', buildingCalculationRouter);
 
