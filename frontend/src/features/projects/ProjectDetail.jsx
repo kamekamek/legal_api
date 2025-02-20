@@ -54,6 +54,13 @@ const ProjectDetail = () => {
   const [selectedKokujiId, setSelectedKokujiId] = useState(null);
   const [kokujiList, setKokujiList] = useState([]);
 
+  // 条文表示用のダイアログを追加
+  const [dialogState, setDialogState] = useState({
+    open: false,
+    title: '',
+    content: ''
+  });
+
   useEffect(() => {
     const fetchProject = async () => {
       try {
@@ -68,14 +75,24 @@ const ProjectDetail = () => {
         const legalResponse = await fetch(`http://localhost:3001/api/v1/projects/${id}/legal-info`);
         if (legalResponse.ok) {
           const legalData = await legalResponse.json();
-          setLegalInfo(legalData);
+          if (legalData.status === 'success' && legalData.data) {
+            setLegalInfo(legalData.data);
+          }
         }
 
         // 告示文一覧を取得
-        const kokujiResponse = await fetch(`http://localhost:3001/api/v1/projects/${id}/kokuji`);
-        if (kokujiResponse.ok) {
-          const kokujiData = await kokujiResponse.json();
-          setKokujiList(kokujiData.data);
+        try {
+          const kokujiResponse = await fetch(`http://localhost:3001/api/v1/projects/${id}/kokuji`);
+          if (kokujiResponse.ok) {
+            const kokujiData = await kokujiResponse.json();
+            setKokujiList(kokujiData.data);
+          } else {
+            console.warn('告示文一覧の取得に失敗しました:', await kokujiResponse.text());
+            setKokujiList([]);  // 空の配列をセット
+          }
+        } catch (error) {
+          console.error('告示文一覧取得エラー:', error);
+          setKokujiList([]);  // エラー時は空の配列をセット
         }
       } catch (error) {
         console.error('Error:', error);
@@ -178,46 +195,129 @@ const ProjectDetail = () => {
     }
   };
 
-  // InfoRow コンポーネントの追加
-  const InfoRow = ({ label, value }) => {
-    return (
-      <Grid item xs={12}>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          {label}
-        </Typography>
-        <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
-          {value}
-        </Typography>
-        <Divider sx={{ mt: 2 }} />
-      </Grid>
-    );
-  };
+  const renderLegalInfo = () => {
+    if (!legalInfo) return '未取得';
 
-  // InfoRowWithButton コンポーネントの追加
-  const InfoRowWithButton = ({ label, value, buttonText, onClick }) => {
-    return (
-      <Grid item xs={12}>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+    const InfoRow = ({ label, value, button }) => (
+      <Box sx={{
+        display: 'flex',
+        borderBottom: '1px solid #eee',
+        py: 2,
+        '&:last-child': {
+          borderBottom: 'none'
+        }
+      }}>
+        <Typography
+          component="div"
+          sx={{
+            width: '30%',
+            color: 'text.secondary',
+            fontWeight: 'normal'
+          }}
+        >
           {label}
         </Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
-            {value}
+        <Box sx={{
+          width: '70%',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography component="div">
+            {value || '−'}
           </Typography>
-          {buttonText && (
+          {button && (
             <Button
               variant="contained"
-              onClick={onClick}
               size="small"
-              sx={{ ml: 'auto' }}
+              color="primary"
+              onClick={button.onClick}
+              sx={{ ml: 2 }}
             >
-              {buttonText}
+              {button.label}
             </Button>
           )}
         </Box>
-        <Divider sx={{ mt: 2 }} />
-      </Grid>
+      </Box>
     );
+
+    return (
+      <Box sx={{ width: '100%' }}>
+        <InfoRow label="所在地" value={project?.location} />
+        <InfoRow label="用途地域" value={legalInfo.type ? YOUTO_MAPPING[legalInfo.type] : '−'} />
+        <InfoRow label="防火地域" value={legalInfo.fireArea ? BOUKA_MAPPING[legalInfo.fireArea] : '−'} />
+        <InfoRow label="建蔽率" value={legalInfo.buildingCoverageRatio ? `${legalInfo.buildingCoverageRatio}%` : '−'} />
+        <InfoRow label="建蔽率（制限値）" value={legalInfo.buildingCoverageRatio2 ? `${legalInfo.buildingCoverageRatio2}%` : '−'} />
+        <InfoRow label="容積率" value={legalInfo.floorAreaRatio ? `${legalInfo.floorAreaRatio}%` : '−'} />
+        <InfoRow label="高度地区" value={(() => {
+          if (!legalInfo.heightDistrict) return '−';
+          const height = parseHeightDistrict(legalInfo.heightDistrict);
+          if (!height) return '−';
+          return height.join('\n');
+        })()} />
+        <InfoRow label="高度地区（制限値）" value={(() => {
+          if (!legalInfo.heightDistrict2) return '−';
+          const height = parseHeightDistrict(legalInfo.heightDistrict2);
+          if (!height) return '−';
+          return height.join('\n');
+        })()} />
+        <InfoRow label="区域区分" value={(() => {
+          if (!legalInfo.zoneMap) return '−';
+          const parts = legalInfo.zoneMap.split(':');
+          return ZONE_DIVISION_MAPPING[parts[0]] || '−';
+        })()} />
+        <InfoRow label="風致地区" value={(() => {
+          const scenic = parseScenicDistrict(legalInfo.scenicZoneName, legalInfo.scenicZoneType);
+          if (!scenic) return '−';
+          return [
+            scenic.name,
+            scenic.type && `第${scenic.type}種`
+          ].filter(Boolean).join(' ');
+        })()} />
+        <InfoRow 
+          label="建築基準法48条" 
+          value="準備中"
+          button={{ 
+            label: '条文を表示', 
+            onClick: () => handleOpenDialog('建築基準法48条', legalInfo.article48 || '準備中') 
+          }}
+        />
+        <InfoRow 
+          label="法別表第2" 
+          value="準備中"
+          button={{ 
+            label: '条文を表示', 
+            onClick: () => handleOpenDialog('法別表第2', legalInfo.appendix2 || '準備中') 
+          }}
+        />
+        <InfoRow 
+          label="告示文" 
+          value={kokujiList.length > 0 ? `${kokujiList.length}件の告示文があります` : '関連する告示文はありません'}
+          button={{ 
+            label: '告示文を表示', 
+            onClick: () => setOpenKokujiDialog(true) 
+          }}
+        />
+        <InfoRow label="東京都建築安全条例" value="準備中" />
+      </Box>
+    );
+  };
+
+  // 条文表示用のダイアログを追加
+  const handleOpenDialog = (title, content) => {
+    setDialogState({
+      open: true,
+      title,
+      content
+    });
+  };
+
+  const handleCloseDialog = () => {
+    setDialogState({
+      open: false,
+      title: '',
+      content: ''
+    });
   };
 
   if (loading) {
@@ -350,71 +450,7 @@ const ProjectDetail = () => {
             </Box>
           </Box>
 
-          <Grid container spacing={2}>
-            <InfoRow 
-              label="用途地域" 
-              value={legalInfo?.type ? YOUTO_MAPPING[legalInfo.type] || '−' : '未取得'} 
-            />
-            <InfoRow 
-              label="防火地域" 
-              value={legalInfo?.fireArea ? BOUKA_MAPPING[legalInfo.fireArea] || '−' : '−'} 
-            />
-            <InfoRow 
-              label="建蔽率" 
-              value={legalInfo?.buildingCoverageRatio ? `${legalInfo.buildingCoverageRatio}%` : '−'} 
-            />
-            <InfoRow 
-              label="建蔽率（制限値）" 
-              value={legalInfo?.buildingCoverageRatio2 ? `${legalInfo.buildingCoverageRatio2}%` : '−'} 
-            />
-            <InfoRow 
-              label="容積率" 
-              value={legalInfo?.floorAreaRatio ? `${legalInfo.floorAreaRatio}%` : '−'} 
-            />
-            <InfoRow 
-              label="高度地区" 
-              value={legalInfo?.heightDistrict ? (() => {
-                const height = parseHeightDistrict(legalInfo.heightDistrict);
-                if (!height) return '−';
-                return height.join('\n');
-              })() : '−'} 
-            />
-            <InfoRow 
-              label="高度地区（制限値）" 
-              value={legalInfo?.heightDistrict2 ? (() => {
-                const height = parseHeightDistrict(legalInfo.heightDistrict2);
-                if (!height) return '−';
-                return height.join('\n');
-              })() : '−'} 
-            />
-            <InfoRow 
-              label="区域区分" 
-              value={legalInfo?.zoneMap ? (() => {
-                const parts = legalInfo.zoneMap.split(':');
-                return ZONE_DIVISION_MAPPING[parts[0]] || '−';
-              })() : '−'} 
-            />
-            <InfoRow 
-              label="風致地区" 
-              value={(() => {
-                const scenic = parseScenicDistrict(legalInfo?.scenicZoneName, legalInfo?.scenicZoneType);
-                if (!scenic) return '−';
-                return [
-                  scenic.name,
-                  scenic.type && `第${scenic.type}種`
-                ].filter(Boolean).join(' ');
-              })()} 
-            />
-            <InfoRowWithButton
-              label="告示文"
-              value={kokujiList.length > 0 ? `${kokujiList.length}件の告示文があります` : '関連する告示文はありません'}
-              buttonText={kokujiList.length > 0 ? "告示文を表示" : null}
-              onClick={() => setOpenKokujiDialog(true)}
-            />
-            <InfoRow label="建築基準法48条" value={legalInfo?.article48 || '準備中'} />
-            <InfoRow label="法別表第２" value={legalInfo?.appendix2 || '準備中'} />
-            <InfoRow label="東京都建築安全条例" value={legalInfo?.safetyOrdinance || '準備中'} />
-          </Grid>
+          {renderLegalInfo()}
         </Paper>
 
         {/* 建築計算機能 */}
@@ -574,6 +610,44 @@ const ProjectDetail = () => {
           setOpenKokujiDialog(false);
         }}
       />
+
+      {/* 条文表示ダイアログ */}
+      <Dialog
+        open={dialogState.open}
+        onClose={handleCloseDialog}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            height: '80vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }
+        }}
+      >
+        <DialogTitle>
+          {dialogState.title}
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseDialog}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ 
+            fontFamily: 'serif',
+            fontSize: '1.1rem',
+            lineHeight: 1.8,
+            whiteSpace: 'pre-wrap',
+            overflowY: 'auto',
+            padding: 2
+          }}>
+            {dialogState.content}
+          </Box>
+        </DialogContent>
+      </Dialog>
     </Container>
   );
 };

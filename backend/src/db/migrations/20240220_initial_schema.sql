@@ -16,7 +16,7 @@ CREATE TABLE projects (
 CREATE TABLE legal_info (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_id uuid REFERENCES projects(id) ON DELETE CASCADE,
-    type text NOT NULL,
+    type text,
     fire_area text,
     building_coverage_ratio numeric,
     building_coverage_ratio2 numeric,
@@ -26,9 +26,9 @@ CREATE TABLE legal_info (
     zone_map text,
     scenic_zone_name text,
     scenic_zone_type text,
-    article_48 jsonb,
-    appendix_2 jsonb,
-    safety_ordinance jsonb,
+    article_48 text,
+    appendix_2 text,
+    safety_ordinance text,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now()
 );

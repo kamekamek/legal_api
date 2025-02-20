@@ -664,16 +664,41 @@ const ZoneSearch = () => {
     if (!landUseInfo || !projectId) return;
 
     try {
+      // APIの期待する形式にデータを変換
+      const legalInfoData = {
+        type: landUseInfo.type,
+        fire_area: landUseInfo.fireArea,
+        building_coverage_ratio: parseFloat(landUseInfo.buildingCoverageRatio),
+        building_coverage_ratio2: parseFloat(landUseInfo.buildingCoverageRatio2),
+        floor_area_ratio: parseFloat(landUseInfo.floorAreaRatio),
+        height_district: landUseInfo.heightDistrict,
+        height_district2: landUseInfo.heightDistrict2,
+        zone_map: landUseInfo.zoneMap,
+        scenic_zone_name: landUseInfo.scenicZoneName,
+        scenic_zone_type: landUseInfo.scenicZoneType,
+        article_48: null,  // 現時点では未実装
+        appendix_2: null,  // 現時点では未実装
+        safety_ordinance: null  // 現時点では未実装
+      };
+
+      console.log('送信する法令情報:', {
+        originalData: landUseInfo,
+        convertedData: legalInfoData
+      });
+
       const response = await fetch(`http://localhost:3001/api/v1/projects/${projectId}/legal-info`, {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(landUseInfo),
+        body: JSON.stringify(legalInfoData),
       });
 
+      const responseData = await response.json();
+      console.log('サーバーレスポンス:', responseData);
+
       if (!response.ok) {
-        throw new Error('法令情報の更新に失敗しました');
+        throw new Error(responseData.error?.message || '法令情報の更新に失敗しました');
       }
 
       setSnackbar({
@@ -687,6 +712,7 @@ const ZoneSearch = () => {
         navigate(`/projects/${projectId}`);
       }, 3000);
     } catch (error) {
+      console.error('法令情報保存エラー:', error);
       setSnackbar({
         open: true,
         message: error.message || '法令情報の保存に失敗しました',

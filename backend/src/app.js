@@ -4,6 +4,7 @@ const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
 const axios = require('axios');
 const buildingCalculationRouter = require('./routes/buildingCalculation');
+const legalRouter = require('./routes/legal');
 
 const app = express();
 
@@ -199,8 +200,11 @@ app.get('/api/kokuji/:kokuji_id', async (req, res) => {
 // 建築計算APIルーターを追加
 app.use('/api/v1', buildingCalculationRouter);
 
+// 法令情報APIルーターを追加
+app.use('/api/v1', legalRouter);
+
 // ルートの設定
-app.use('/api/v1', routes);
+app.use('/', routes);
 
 // エラーハンドリングミドルウェア
 app.use(errorHandler);

@@ -23,7 +23,7 @@ const ProjectForm = () => {
     name: '',
     description: '',
     status: 'planning',
-    address: ''
+    location: ''
   });
   const [validationErrors, setValidationErrors] = useState({});
 
@@ -44,7 +44,7 @@ const ProjectForm = () => {
           name: data.name || '',
           description: data.description || '',
           status: data.status || 'planning',
-          address: data.address || ''
+          location: data.location || ''
         });
       } catch (error) {
         setError(error.message);
@@ -90,7 +90,8 @@ const ProjectForm = () => {
       });
 
       if (!response.ok) {
-        throw new Error('プロジェクトの保存に失敗しました');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'プロジェクトの保存に失敗しました');
       }
 
       navigate('/projects');
@@ -161,24 +162,24 @@ const ProjectForm = () => {
           value={formData.status}
           onChange={handleChange}
           label="ステータス"
-          data-testid="status-select"
+          required
         >
-          <MenuItem value="planning" data-testid="status-option-planning">計画中</MenuItem>
-          <MenuItem value="in_progress" data-testid="status-option-in-progress">進行中</MenuItem>
-          <MenuItem value="completed" data-testid="status-option-completed">完了</MenuItem>
-          <MenuItem value="on_hold" data-testid="status-option-on-hold">保留中</MenuItem>
+          <MenuItem value="planning">計画中</MenuItem>
+          <MenuItem value="in_progress">進行中</MenuItem>
+          <MenuItem value="completed">完了</MenuItem>
+          <MenuItem value="on_hold">保留中</MenuItem>
         </Select>
         {validationErrors.status && (
-          <FormHelperText data-testid="status-error">{validationErrors.status}</FormHelperText>
+          <FormHelperText>{validationErrors.status}</FormHelperText>
         )}
       </FormControl>
 
       <TextField
         fullWidth
-        label="住所"
-        name="address"
-        value={formData.address}
-        disabled
+        label="所在地"
+        name="location"
+        value={formData.location}
+        onChange={handleChange}
         margin="normal"
       />
 
