@@ -489,25 +489,17 @@ graph TD
 
 1. データベース
    ```sql
-   -- 告示文テーブル
-   CREATE TABLE kokuji (
-       id SERIAL PRIMARY KEY,
-       kokuji_id VARCHAR(100) NOT NULL UNIQUE,
-       title TEXT NOT NULL,
-       kokuji_text TEXT NOT NULL,
-       effective_date DATE,
-       category VARCHAR(100),
-       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-   );
-
-   -- プロジェクトと告示文の関連テーブル
+   -- プロジェクト告示文テーブル
    CREATE TABLE project_kokuji (
        id SERIAL PRIMARY KEY,
        project_id INTEGER REFERENCES projects(id),
-       kokuji_id VARCHAR(100) REFERENCES kokuji(kokuji_id),
+       kokuji_id VARCHAR(100) NOT NULL,
+       kokuji_text TEXT NOT NULL,
        memo TEXT,
        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-       UNIQUE(project_id, kokuji_id)
+       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       created_by uuid REFERENCES auth.users(id),
+       updated_by uuid REFERENCES auth.users(id)
    );
    ```
 
@@ -519,7 +511,7 @@ graph TD
 3. フロントエンド実装
    - 告示文表示ダイアログ
    - 告示文一覧表示
-   - プロジェクトへの関連付け機能
+   - プロジェクトへの保存機能
 
 #### 技術スタック
 - バックエンド: Express.js, Supabase
@@ -528,16 +520,16 @@ graph TD
 
 #### タイムライン
 - API仕様策定: 完了
-- バックエンド実装: 未着手
+- データベース設計: 完了
+- バックエンド実装: 進行中
 - フロントエンド実装: 進行中
 - テスト実装: 未着手
 - デプロイ: 未着手
 
 #### 次のステップ
-1. データベーススキーマの設計と実装
-2. バックエンドAPIの実装
-3. フロントエンドとの連携テスト
-4. E2Eテストの実装
+1. バックエンドAPIの実装完了
+2. フロントエンドとの連携テスト
+3. E2Eテストの実装
 
 ## その他の機能
 

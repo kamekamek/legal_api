@@ -220,7 +220,7 @@ erDiagram
     Project ||--o{ LegalDocument : contains
     LegalDocument ||--o{ ZoneInfo : has
     LegalDocument ||--o{ BuildingRestriction : includes
-    LegalDocument ||--o{ Regulation : contains
+    LegalDocument ||--o{ ProjectKokuji : contains
     
     LegalDocument {
         int id PK
@@ -257,14 +257,12 @@ erDiagram
         timestamp created_at
     }
     
-    Regulation {
+    ProjectKokuji {
         int id PK
-        int legal_document_id FK
-        string notification_id
-        text notification_content
-        date effective_date
-        text safety_ordinance_articles
-        text safety_ordinance_content
+        int project_id FK
+        string kokuji_id
+        text kokuji_text
+        text memo
         timestamp created_at
     }
 ```
@@ -310,16 +308,15 @@ CREATE TABLE building_restrictions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 条例・告示情報
-CREATE TABLE regulations (
+-- プロジェクト告示文
+CREATE TABLE project_kokuji (
     id SERIAL PRIMARY KEY,
-    legal_document_id INTEGER REFERENCES legal_documents(id),
-    notification_id VARCHAR(100),
-    notification_content TEXT,
-    effective_date DATE,
-    safety_ordinance_articles TEXT[],
-    safety_ordinance_content TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    project_id INTEGER REFERENCES projects(id),
+    kokuji_id VARCHAR(100) NOT NULL,
+    kokuji_text TEXT NOT NULL,
+    memo TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
@@ -338,7 +335,7 @@ sequenceDiagram
     A->>DB: 法令文書保存
     A->>DB: 用途地域情報保存
     A->>DB: 建築制限情報保存
-    A->>DB: 条例・告示情報保存
+    A->>DB: 告示文保存
     Note right of A: トランザクション終了
     
     DB-->>A: 保存完了
@@ -377,16 +374,10 @@ sequenceDiagram
       "restrictions": []
     }
   },
-  "regulations": {
-    "notifications": [{
-      "notification_id": "412K500040001453",
-      "content": "...",
-      "effective_date": "2024-01-01"
-    }],
-    "tokyo_building_safety": {
-      "article_numbers": ["第30条", "第31条"],
-      "content": "..."
-    }
+  "kokuji": {
+    "kokuji_id": "412K500040001453",
+    "kokuji_text": "...",
+    "memo": "..."
   }
 }
 ```

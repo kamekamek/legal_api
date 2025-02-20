@@ -35,6 +35,7 @@ import {
 import { parseHeightDistrict, parseScenicDistrict } from '../legal/utils/zoneUtils';
 import KokujiDialog from '../legal/components/KokujiDialog';
 import CloseIcon from '@mui/icons-material/Close';
+import BuildingCalculator from '../legal/BuildingCalculator';
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -415,6 +416,14 @@ const ProjectDetail = () => {
             <InfoRow label="東京都建築安全条例" value={legalInfo?.safetyOrdinance || '準備中'} />
           </Grid>
         </Paper>
+
+        {/* 建築計算機能 */}
+        {project && legalInfo && (
+          <BuildingCalculator 
+            projectId={project.id} 
+            legalInfo={legalInfo}
+          />
+        )}
       </Box>
 
       <Dialog

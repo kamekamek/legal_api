@@ -3,6 +3,7 @@ const cors = require('cors');
 const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
 const axios = require('axios');
+const buildingCalculationRouter = require('./routes/buildingCalculation');
 
 const app = express();
 
@@ -114,6 +115,9 @@ app.get('/api/landuse', async (req, res) => {
     });
   }
 });
+
+// 建築計算APIルーターを追加
+app.use('/api/v1', buildingCalculationRouter);
 
 // ルートの設定
 app.use('/api/v1', routes);
