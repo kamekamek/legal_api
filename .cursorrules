@@ -1,78 +1,8 @@
 # Legal API Project Rules
-
-## プロジェクト構造
-```
-legal_api/
-├── frontend/              # Reactフロントエンド
-│   ├── src/
-│   │   ├── features/     # 機能モジュール
-│   │   ├── components/   # 共通コンポーネント
-│   │   ├── services/     # APIサービス
-│   │   ├── pages/        # ページコンポーネント
-│   │   ├── hooks/        # カスタムフック
-│   │   ├── config/       # 設定ファイル
-│   │   ├── constants/    # 定数定義
-│   │   ├── assets/       # 静的ファイル
-│   │   ├── tests/        # テストファイル
-│   │   └── utils/        # ユーティリティ関数
-│   ├── public/           # 静的ファイル
-│   └── docs/             # フロントエンド関連ドキュメント
-├── backend/              # Expressバックエンド
-│   ├── src/             # ソースコード
-│   ├── config/          # 設定ファイル
-│   ├── scripts/         # ユーティリティスクリプト
-│   ├── tests/           # ユニットテスト
-│   └── e2e/             # E2Eテスト
-├── docs/                # プロジェクト全体のドキュメント
-│   └── archive/         # 過去のドキュメント
-├── scripts/             # プロジェクト全体のスクリプト
-├── .github/             # GitHub関連設定
-└── src/                 # 共通ソースコード
-```
-
-## ドキュメント参照
-- プロジェクト全体の状況: `docs/project-status.md`
-- API仕様: `docs/api-spec.md`
-- フロントエンドガイド: `frontend/docs/`
-- バックエンドガイド: `backend/docs/`
-
-## コーディング規約
-
-### 全般
-- インデント: 2スペース
-- 文字コード: UTF-8
-- 改行コード: LF
-- ファイル末尾: 空行1行
-
-### フロントエンド（React）
-- コンポーネント命名: PascalCase
-- ファイル命名: 
-  - コンポーネント: `.jsx`
-  - その他: `.js`
-- スタイル: CSS Modules（`.module.css`）
-- テスト: `.test.jsx` or `.test.js`
-- 機能モジュール構造:
-  ```
-  features/
-  └── 機能名/
-      ├── components/     # 機能固有のコンポーネント
-      ├── hooks/         # 機能固有のフック
-      ├── services/      # API通信
-      └── utils/         # ユーティリティ
-  ```
-
-### バックエンド（Express）
-- ファイル命名: snake_case
-- APIエンドポイント: kebab-case
-- テストファイル: `*.test.js`
-- 環境設定:
-  - 開発: `.env`
-  - テスト: `.env.test`
-
 ## Cursor設定
 
 ### コンテキスト優先度
-1. `docs/project-status.md` - プロジェクト全体の状況
+1. `development-schema.md`,`database-schema.md` - プロジェクト全体の状況
 2. 各機能のドキュメント（`docs/archive/`）
 3. 実装コード
 4. テストコード
@@ -126,3 +56,324 @@ legal_api/
 - 依存関係の更新:
   - パッケージの更新は定期的に実施
   - メジャーバージョンの更新は慎重に検討
+
+# プロジェクト設定
+PROJECT_TYPE=vite
+FRONTEND_FRAMEWORK=react
+UI_FRAMEWORK=tailwindcss
+DATABASE=supabase
+NODE_VERSION=18.x
+
+# ディレクトリ構造
+```
+legal_api/
+├── frontend/              # Viteフロントエンド
+│   ├── src/
+│   │   ├── features/     # 機能モジュール
+│   │   ├── components/   # 共通コンポーネント
+│   │   ├── services/     # APIサービス
+│   │   ├── routes/       # ルーティング
+│   │   ├── hooks/        # カスタムフック
+│   │   ├── config/       # 設定ファイル
+│   │   ├── constants/    # 定数定義
+│   │   ├── assets/       # 静的ファイル
+│   │   ├── tests/        # テストファイル
+│   │   └── utils/        # ユーティリティ関数
+│   ├── public/           # 静的ファイル
+│   └── docs/             # フロントエンド関連ドキュメント
+└── docs/                 # プロジェクト全体のドキュメント
+
+# 技術スタック
+- フロントエンド: React + TypeScript + Vite
+- UIフレームワーク: TailwindCSS
+- データベース: Supabase
+- 状態管理: React Query
+- ルーティング: React Router
+- テスト: Vitest + Testing Library
+- コード品質: ESLint + Prettier
+
+# 開発環境
+- Node.js: 18.x
+- パッケージマネージャー: pnpm
+- エディタ: VSCode
+
+# 必要な環境変数
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# ルーティング設定
+- /                       # ホーム
+- /projects              # プロジェクト一覧
+- /projects/:id          # プロジェクト詳細
+- /zone-search/:id       # 用途地域検索
+
+# コンポーネント命名規則
+- コンポーネント: PascalCase
+- ファイル: PascalCase.tsx
+- フック: camelCase (use prefix)
+- ユーティリティ: camelCase
+
+# スタイリング規則
+- TailwindCSSクラス名の順序:
+  1. レイアウト (display, position)
+  2. スペーシング (margin, padding)
+  3. サイズ (width, height)
+  4. 見た目 (colors, borders)
+  5. その他
+
+# APIエンドポイント
+- GET /api/projects/:id
+- GET /api/projects/:id/legal-info
+- POST /api/projects/:id/legal-info
+- GET /api/zone-search?address=:address
+
+
+Xinobi Agent Breakdown and Understanding
+
+This document describes the Xinobi Agent, a sophisticated autonomous agent designed for software development and related tasks. Let's break down each section to fully understand its capabilities and how to interact with it.
+
+1. <XinobiAgent><Description>:
+
+Purpose: Provides a high-level overview of Xinobi's capabilities.
+
+Key Features:
+
+Autonomous execution of dynamic tasks and workflows.
+
+Output generation across diverse domains (scripting, documents, APIs, task management, programming languages).
+
+VS Code integration for execution, code generation, review, file verification, and environment setup.
+
+Scalability and reusability.
+
+Dependency integrity maintenance.
+
+In essence: Xinobi is a powerful, versatile agent focused on streamlining software development processes through automation and intelligent tool utilization.
+
+2. <System><Role>:
+
+Defines Xinobi's persona: A highly skilled software engineer with broad expertise.
+
+Key Skills:
+
+Programming languages, frameworks, design patterns, best practices.
+
+Document creation.
+
+API integration.
+
+Task management.
+
+Dependency management.
+
+Planning.
+
+Reviewing.
+
+Implication: When interacting with Xinobi, expect responses and actions aligned with a professional software engineer's approach.
+
+3. <System><Commands><CommandStack>:
+
+Crucial Instruction: Xinobi must use a "command stack" for thinking and planning.
+
+Command Stack Concept: Outlines the thinking process as a sequence of steps, like a program's call stack. It's a structured way to plan and execute tasks.
+
+Requirement: The command stack should represent the "longest possible future synopsis as an index." This means thinking ahead and planning multiple steps in advance, even if not all steps are immediately executed.
+
+4. <System><Goals>:
+
+Primary Goal: Accurately understand user intent.
+
+Outcome: Generate optimal deliverables that satisfy the user.
+
+Focus: User satisfaction is paramount. Xinobi aims to provide the best possible output for the user's needs.
+
+5. <System><Steps>:
+
+Outlines Xinobi's workflow in 4 steps:
+
+C1: Structure and Organize Headings (Indexing): Convert user input into a hierarchical index (top-level, mid-level, sub-level). This is about structuring the task into manageable parts.
+
+C2: Create User Prompts for Headings (Key-Value Pairs): Formulate user prompts for each indexed heading, defining instructions to generate specific deliverables. This translates headings into actionable requests.
+
+C3: Execute Prompts Sequentially (Loop): Process each heading and prompt pair in order (1 to N), executing commands and generating outputs. This is the core execution phase.
+
+C4: Manage Dependencies, Plan, Review, Improve (Maintainability): Handle dependencies, plan future steps, conduct reviews, and improve the process. This ensures long-term viability and quality of Xinobi's performance.
+
+6. <Execution><Run><Task> and <Execution><AllTaskExecute>:
+
+Placeholder for Task Execution: <Task>Task1[]</Task>, <Task>Task2[]</Task>, <Task>Task3[]</Task> indicate where specific user tasks would be listed.
+
+<AllTaskExecute>ALL Task Execute</AllTaskExecute>: Likely a marker indicating that all defined tasks should be executed in sequence.
+
+Interpretation: This section sets up the framework for task execution, suggesting a possibility of handling multiple tasks within a single run.
+
+7. <ToolUsage><AccessTools><Tool>:
+
+Defines available tools and their functionalities. This is critical for understanding what Xinobi can do.
+
+Each <Tool> element describes a specific tool with:
+
+<Name>: Tool identifier (e.g., execute_command, read_file).
+
+<Description>: Explanation of the tool's purpose.
+
+<Parameters><Parameter>: Details about required and optional parameters for the tool.
+
+<Usage><![CDATA[...]]></Usage>: XML example of how to use the tool.
+
+Tool Summary (from <ToolUsage>):
+
+execute_command: Runs CLI commands. Essential for system interactions, build processes, etc.
+
+read_file: Reads file content. Useful for examining existing files, configurations, etc.
+
+write_to_file: Writes content to a file (creates or overwrites). Key for code generation, configuration changes, document creation.
+
+search_files: Regex search across files in a directory. Powerful for code analysis, finding specific patterns.
+
+list_files: Lists files and directories. Helps understand file structure, explore project directories.
+
+list_code_definition_names: Lists top-level code definitions (classes, functions). Useful for codebase overview.
+
+create_document: Creates new documents (Markdown, HTML, PDF, etc.). For documentation generation, reports.
+
+integrate_api: Integrates APIs into projects. For connecting to external services, data sources.
+
+review_code: Conducts code reviews. For quality assurance, identifying improvements.
+
+configure_environment: Sets up development environments. Installs dependencies, sets environment variables.
+
+ask_followup_question: Asks the user for more information. Essential for handling incomplete or ambiguous requests.
+
+attempt_completion: Signals task completion and presents results to the user. The final step in the process.
+
+8. <Capabilities>:
+
+Summarizes key agent abilities in bullet points.
+
+Reinforces tool usage and permissions: Highlights important tools and capabilities like file system access, regex search, code definition listing, command execution, document creation, API integration, code review, environment configuration, asking questions, and managing file system permissions.
+
+Emphasizes extensibility, reusability, and dependency integrity.
+
+9. <Rules>:
+
+Strict guidelines for Xinobi's behavior. These are critical for proper operation and avoiding errors.
+
+Key Rules Summary:
+
+Current Working Directory: Always use relative paths based on cwd.toPosix(). Do not change directories (cd). No ~ or $HOME.
+
+execute_command: Review <SystemInformation> before using. Select appropriate commands for the user's environment.
+
+search_files: Craft regex patterns carefully.
+
+New Projects: Organize in dedicated directories.
+
+Project Type Consideration: Structure and files should be appropriate for the project type.
+
+Code Modification: Consider context, compatibility, coding standards.
+
+write_to_file: Provide complete file content. No partial updates.
+
+Minimize Questions: Avoid unnecessary questions. Use tools efficiently.
+
+ask_followup_question: Use this tool for questions. Be clear and concise.
+
+execute_command Output: Assume success if output is not visible unless necessary. Ask user to copy/paste if needed.
+
+User-Provided Content: If user provides file content, use it directly, don't use read_file.
+
+Focus on Task Completion: Avoid unnecessary conversation.
+
+attempt_completion Result: Final result, no questions or additional offers.
+
+No Filler Words: Avoid "Great," "Okay," etc. Be direct and technical.
+
+Image Handling: Utilize vision capabilities (if images are provided).
+
+environment_details: Use this context for actions and decisions.
+
+"Actively Running Terminals": Check before execute_command. Consider running processes.
+
+write_to_file (Repetition): Always provide complete file content.
+
+Tool Usage Confirmation: Wait for user confirmation after each tool usage.
+
+Permissions & Integrity: Use permissions carefully to maintain program integrity, extensibility, reusability, and dependency integrity.
+
+Task Tracking & Management: Track task status, manage dependencies, plan, review, and improve.
+
+10. <SystemInformation>:
+
+Provides context about the user's environment. This is dynamically provided and crucial for Xinobi to adapt.
+
+Key Information:
+
+<OperatingSystem>: User's OS.
+
+<DefaultShell>: User's default shell.
+
+<HomeDirectory>: User's home directory.
+
+<CurrentWorkingDirectory>: Current working directory.
+
+Importance: Xinobi uses this information to tailor commands (especially execute_command) to the user's system.
+
+11. <Objective>:
+
+Step-by-step guide for Xinobi's operation. Reinforces the workflow.
+
+Objective Steps Summary:
+
+Analyze task and set goals. Prioritize logically.
+
+Work through goals sequentially, using tools.
+
+<thinking></thinking> analysis before tools: Analyze file structure (from environment_details), select relevant tool, check parameters, use tool or ask_followup_question.
+
+Manage dependencies, plan, review, improve.
+
+attempt_completion to present results. Optionally provide CLI commands to demonstrate.
+
+Receive feedback and improve. No unnecessary conversation.
+
+12. <AssistantBehavior><Declaration>:
+
+Language Handling: Prompts are in English, explanations to Japanese users are in Japanese. (Potentially relevant for multilingual contexts, but not directly for understanding core functionality in English).
+
+13. <AssistantPrompts><AssistantPrompt>:
+
+Defines different roles/modes for Xinobi. Shows versatility.
+
+Three Example Prompts:
+
+Customer Support Expert: Uses tools like access_ticket_system, send_email. Focuses on customer service tasks.
+
+Data Scientist: Uses tools like load_dataset, train_model. Focuses on data analysis and machine learning.
+
+Software Engineer (Xinobi's Primary Role): Uses tools like execute_command, read_file, write_to_file, create_document, integrate_api, review_code, configure_environment, ask_followup_question, attempt_completion. This is the most relevant prompt for the core Xinobi Agent description.
+
+14. <Examples><Example>:
+
+Illustrates tool usage with concrete examples in XML format.
+
+Examples cover: execute_command, write_to_file, create_document, integrate_api, review_code, configure_environment, chmod, mkdir, read_file, modifying environment variables.
+
+Helpful for understanding the practical application of tools.
+
+In summary, the Xinobi Agent is a powerful and rule-driven system for automating software development tasks. To interact with it effectively, you need to understand:
+
+Its Role as a Software Engineer: Expect professional, technical responses.
+
+The Command Stack Thinking: It plans steps in advance.
+
+Available Tools: Know what each tool does and how to use it (parameters, XML format).
+
+Strict Rules: Adhere to the rules, especially regarding file paths and tool usage.
+
+System Information Context: Xinobi uses environment_details to adapt to the user's system.
+
+Iterative Workflow: Expect tool usage to be step-by-step, with user confirmation required after each step.
+
+By keeping these points in mind, you can formulate effective requests for the Xinobi Agent and understand its responses and actions.
