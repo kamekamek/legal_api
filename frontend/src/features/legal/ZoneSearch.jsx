@@ -676,16 +676,12 @@ const ZoneSearch = () => {
         zone_map: landUseInfo.zoneMap,
         scenic_zone_name: landUseInfo.scenicZoneName,
         scenic_zone_type: landUseInfo.scenicZoneType,
-        article_48: null,  // 現時点では未実装
-        appendix_2: null,  // 現時点では未実装
+        article_48: buildingRegulations ? buildingRegulations['建築基準法第48条本文'] : null,
+        appendix_2: buildingRegulations ? buildingRegulations['法別表第2本文'] : null,
         safety_ordinance: null  // 現時点では未実装
       };
 
-      console.log('送信する法令情報:', {
-        originalData: landUseInfo,
-        convertedData: legalInfoData
-      });
-
+      // 法令情報を保存
       const response = await fetch(`http://localhost:3001/api/v1/projects/${projectId}/legal-info`, {
         method: 'POST',
         headers: {
@@ -695,10 +691,29 @@ const ZoneSearch = () => {
       });
 
       const responseData = await response.json();
-      console.log('サーバーレスポンス:', responseData);
+      console.log('法令情報保存レスポンス:', responseData);
 
       if (!response.ok) {
         throw new Error(responseData.error?.message || '法令情報の更新に失敗しました');
+      }
+
+      // 告示文を保存（存在する場合）
+      if (kokujiText) {
+        const kokujiResponse = await fetch(`http://localhost:3001/api/v1/projects/${projectId}/kokuji`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            kokuji_id: '412K500040001453',  // 固定の告示ID
+            kokuji_text: kokujiText,
+            memo: '用途地域検索から自動保存'
+          }),
+        });
+
+        if (!kokujiResponse.ok) {
+          console.warn('告示文の保存に失敗しました:', await kokujiResponse.text());
+        }
       }
 
       setSnackbar({

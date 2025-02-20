@@ -72,27 +72,37 @@ const ProjectDetail = () => {
         setProject(data);
 
         // 法令情報を取得
-        const legalResponse = await fetch(`http://localhost:3001/api/v1/projects/${id}/legal-info`);
-        if (legalResponse.ok) {
+        try {
+          const legalResponse = await fetch(`http://localhost:3001/api/v1/projects/${id}/legal-info`);
           const legalData = await legalResponse.json();
-          if (legalData.status === 'success' && legalData.data) {
+          console.log('取得した法令情報:', legalData);
+          
+          if (legalResponse.ok && legalData.status === 'success' && legalData.data) {
             setLegalInfo(legalData.data);
+          } else {
+            console.warn('法令情報の取得に失敗しました:', legalData);
+            setLegalInfo(null);
           }
+        } catch (error) {
+          console.error('法令情報取得エラー:', error);
+          setLegalInfo(null);
         }
 
         // 告示文一覧を取得
         try {
           const kokujiResponse = await fetch(`http://localhost:3001/api/v1/projects/${id}/kokuji`);
-          if (kokujiResponse.ok) {
-            const kokujiData = await kokujiResponse.json();
-            setKokujiList(kokujiData.data);
+          const kokujiData = await kokujiResponse.json();
+          console.log('取得した告示文一覧:', kokujiData);
+          
+          if (kokujiResponse.ok && kokujiData.status === 'success') {
+            setKokujiList(kokujiData.data || []);
           } else {
-            console.warn('告示文一覧の取得に失敗しました:', await kokujiResponse.text());
-            setKokujiList([]);  // 空の配列をセット
+            console.warn('告示文一覧の取得に失敗しました:', kokujiData);
+            setKokujiList([]);
           }
         } catch (error) {
           console.error('告示文一覧取得エラー:', error);
-          setKokujiList([]);  // エラー時は空の配列をセット
+          setKokujiList([]);
         }
       } catch (error) {
         console.error('Error:', error);
@@ -276,27 +286,48 @@ const ProjectDetail = () => {
         })()} />
         <InfoRow 
           label="建築基準法48条" 
-          value="準備中"
-          button={{ 
-            label: '条文を表示', 
-            onClick: () => handleOpenDialog('建築基準法48条', legalInfo.article48 || '準備中') 
-          }}
+          value={
+            legalInfo.article48 ? (
+              <Button
+                variant="contained"
+                onClick={() => handleOpenDialog('建築基準法48条', legalInfo.article48)}
+                size="small"
+                sx={{ ml: 'auto' }}
+              >
+                条文を表示
+              </Button>
+            ) : '取得中...'
+          }
         />
         <InfoRow 
           label="法別表第2" 
-          value="準備中"
-          button={{ 
-            label: '条文を表示', 
-            onClick: () => handleOpenDialog('法別表第2', legalInfo.appendix2 || '準備中') 
-          }}
+          value={
+            legalInfo.appendix2 ? (
+              <Button
+                variant="contained"
+                onClick={() => handleOpenDialog('法別表第2', legalInfo.appendix2)}
+                size="small"
+                sx={{ ml: 'auto' }}
+              >
+                条文を表示
+              </Button>
+            ) : '取得中...'
+          }
         />
         <InfoRow 
           label="告示文" 
-          value={kokujiList.length > 0 ? `${kokujiList.length}件の告示文があります` : '関連する告示文はありません'}
-          button={{ 
-            label: '告示文を表示', 
-            onClick: () => setOpenKokujiDialog(true) 
-          }}
+          value={
+            kokujiList.length > 0 ? (
+              <Button
+                variant="contained"
+                onClick={() => setOpenKokujiDialog(true)}
+                size="small"
+                sx={{ ml: 'auto' }}
+              >
+                告示文を表示
+              </Button>
+            ) : '関連する告示文はありません'
+          }
         />
         <InfoRow label="東京都建築安全条例" value="準備中" />
       </Box>

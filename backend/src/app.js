@@ -118,7 +118,7 @@ app.get('/api/landuse', async (req, res) => {
 });
 
 // 告示文取得APIエンドポイント
-app.get('/api/kokuji/:kokuji_id', async (req, res) => {
+app.get('/api/v1/kokuji/:kokuji_id', async (req, res) => {
   try {
     const { kokuji_id } = req.params;
     console.log('告示文取得リクエスト開始:', { kokuji_id });
