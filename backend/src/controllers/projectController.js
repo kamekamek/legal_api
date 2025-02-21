@@ -2,15 +2,19 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+// Supabaseクライアントの初期化は各関数内で行う
+let supabase;
 
 // プロジェクト一覧の取得
 export const getProjects = async (req, res, next) => {
   try {
-    const { data, error } = await global.supabase
+    // リクエストごとにSupabaseクライアントを初期化
+    supabase = createClient(
+      req.env.SUPABASE_URL,
+      req.env.SUPABASE_ANON_KEY
+    );
+
+    const { data, error } = await supabase
       .from('projects')
       .select('*')
       .order('created_at', { ascending: false });
@@ -30,7 +34,13 @@ export const getProjects = async (req, res, next) => {
 // プロジェクト詳細の取得
 export const getProject = async (req, res, next) => {
   try {
-    const { data, error } = await global.supabase
+    // リクエストごとにSupabaseクライアントを初期化
+    supabase = createClient(
+      req.env.SUPABASE_URL,
+      req.env.SUPABASE_ANON_KEY
+    );
+
+    const { data, error } = await supabase
       .from('projects')
       .select('*')
       .eq('id', req.params.id)
@@ -51,6 +61,12 @@ export const getProject = async (req, res, next) => {
 // プロジェクトの作成
 export const createProject = async (req, res, next) => {
   try {
+    // リクエストごとにSupabaseクライアントを初期化
+    supabase = createClient(
+      req.env.SUPABASE_URL,
+      req.env.SUPABASE_ANON_KEY
+    );
+
     const { name, description } = req.body;
 
     if (!name) {
@@ -63,7 +79,7 @@ export const createProject = async (req, res, next) => {
       });
     }
 
-    const { data, error } = await global.supabase
+    const { data, error } = await supabase
       .from('projects')
       .insert({ name, description })
       .select()
@@ -84,6 +100,12 @@ export const createProject = async (req, res, next) => {
 // プロジェクトの更新
 export const updateProject = async (req, res, next) => {
   try {
+    // リクエストごとにSupabaseクライアントを初期化
+    supabase = createClient(
+      req.env.SUPABASE_URL,
+      req.env.SUPABASE_ANON_KEY
+    );
+
     const { id } = req.params;
     const { name, description } = req.body;
 
@@ -97,7 +119,7 @@ export const updateProject = async (req, res, next) => {
       });
     }
 
-    const { data, error } = await global.supabase
+    const { data, error } = await supabase
       .from('projects')
       .update({ name, description })
       .eq('id', id)
@@ -129,9 +151,15 @@ export const updateProject = async (req, res, next) => {
 // プロジェクトの削除
 export const deleteProject = async (req, res, next) => {
   try {
+    // リクエストごとにSupabaseクライアントを初期化
+    supabase = createClient(
+      req.env.SUPABASE_URL,
+      req.env.SUPABASE_ANON_KEY
+    );
+
     const { id } = req.params;
 
-    const { error } = await global.supabase
+    const { error } = await supabase
       .from('projects')
       .delete()
       .eq('id', id);

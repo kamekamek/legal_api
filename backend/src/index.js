@@ -1,40 +1,40 @@
-import 'node:path';
-import 'node:fs';
-import 'node:http';
-import 'node:crypto';
-import 'node:buffer';
-import 'node:stream';
-import 'node:util';
-import 'node:url';
-import 'node:querystring';
-import 'node:events';
-import 'node:string_decoder';
-import 'node:zlib';
-import 'node:os';
-import 'node:net';
-import { createClient } from '@supabase/supabase-js';
-import app from './app';
+import express from 'express';
+import cors from 'cors';
+import routes from './routes';
+import errorHandler from './middleware/errorHandler';
 
-// Cloudflare Workers用のfetchハンドラー
+const app = express();
+
+// ミドルウェアの設定
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  credentials: true
+}));
+
+app.use(express.json());
+
+// 環境変数をリクエストに追加するミドルウェア
+app.use((req, res, next) => {
+  req.env = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+  };
+  next();
+});
+
+// ルーティングの設定
+app.use('/api/v1', routes);
+
+// エラーハンドリングミドルウェア
+app.use(errorHandler);
+
+// Cloudflare Workers用のエクスポート
 export default {
-  async fetch(request, env, ctx) {
-    // Supabaseクライアントの初期化
-    const supabase = createClient(
-      env.SUPABASE_URL,
-      env.SUPABASE_ANON_KEY
-    );
-
-    // グローバルにSupabaseクライアントを公開
-    global.supabase = supabase;
-
-    // デバッグ用（確認後は削除可）
-    console.log('Supabase URL:', env.SUPABASE_URL);
-    console.log('Supabase Key exists:', !!env.SUPABASE_ANON_KEY);
-
+  fetch: async (request, env, ctx) => {
+    // Cloudflare Workersの環境変数をexpressのリクエストに渡す
+    process.env.SUPABASE_URL = env.SUPABASE_URL;
+    process.env.SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY;
+    
     return app(request);
   }
-};
-
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-}); 
+}; 
