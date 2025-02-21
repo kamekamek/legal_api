@@ -1,10 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Supabaseクライアントの初期化
-const supabase = createClient(
-  env.SUPABASE_URL,
-  env.SUPABASE_ANON_KEY
-)
+let supabase;
 
 // CORSヘッダーの設定
 const corsHeaders = {
@@ -14,7 +11,13 @@ const corsHeaders = {
 }
 
 // ルーティングの設定
-async function handleRequest(request) {
+async function handleRequest(request, env) {
+  // Supabaseクライアントの初期化（リクエストごと）
+  supabase = createClient(
+    env.SUPABASE_URL,
+    env.SUPABASE_ANON_KEY
+  )
+
   const url = new URL(request.url)
   
   // プリフライトリクエストの処理
@@ -65,6 +68,6 @@ async function handleRequest(request) {
 // Workersのエントリーポイント
 export default {
   async fetch(request, env, ctx) {
-    return handleRequest(request)
+    return handleRequest(request, env)
   }
 } 
