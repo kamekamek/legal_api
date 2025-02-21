@@ -1,0 +1,20 @@
+name = "legal-api-backend"
+main = "src/index.js"
+compatibility_date = "2024-02-21"
+
+[vars]
+ENVIRONMENT = "production"
+
+# 開発環境用の設定
+[env.development]
+name = "legal-api-backend-dev"
+vars = { ENVIRONMENT = "development" }
+
+# KV Namespaceの設定（必要な場合）
+# [[kv_namespaces]]
+# binding = "MY_KV"
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Secretsは`wrangler secret put`コマンドで設定します
+# 例: wrangler secret put SUPABASE_URL
+# 例: wrangler secret put SUPABASE_ANON_KEY 
