@@ -1,0 +1,12 @@
+# These owners will be the default owners for everything in the repo.
+* @kamekamek
+
+# Frontend specific files
+/frontend/ @kamekamek
+
+# Backend specific files
+/backend/ @kamekamek
+
+# Infrastructure and deployment files
+/.github/workflows/ @kamekamek
+/wrangler.toml @kamekamek 

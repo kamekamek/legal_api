@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import api from '../../services/api';
 import { 
   Box, 
   Button, 
@@ -11,11 +13,12 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 
 const ProjectList = () => {
   const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -24,20 +27,22 @@ const ProjectList = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/v1/projects');
-        if (!response.ok) {
-          throw new Error('プロジェクトの取得に失敗しました');
-        }
-        const data = await response.json();
-        setProjects(data.projects);
-      } catch (error) {
-        console.error('Error:', error);
-        // TODO: エラーハンドリングの実装
+        const response = await api.get('/projects');
+        setProjects(response.data.data || []);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching projects:', err);
+        setError('プロジェクトの取得に失敗しました。');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchProjects();
   }, []);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div className="error">{error}</div>;
 
   const getStatusColor = (status) => {
     switch (status) {

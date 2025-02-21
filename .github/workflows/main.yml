@@ -2,68 +2,63 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [18.x]
-
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-
-    # フロントエンドのテスト
-    - name: Frontend - Install dependencies
-      working-directory: ./frontend
-      run: npm ci
-
-    - name: Frontend - Run tests
-      working-directory: ./frontend
-      run: npm test
-
-    - name: Frontend - Build
-      working-directory: ./frontend
-      run: npm run build
-
-    # バックエンドのテスト
-    - name: Backend - Install dependencies
-      working-directory: ./backend
-      run: npm ci
-
-    - name: Backend - Run tests
-      working-directory: ./backend
-      run: npm test
-
-  deploy-staging:
-    needs: test
-    if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Deploy to staging
-      run: echo "Staging deployment would happen here"
-      # 実際のデプロイコマンドをここに追加
-
-  deploy-production:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install Dependencies
+        run: |
+          cd frontend
+          npm install
+      
+      - name: Run Tests
+        run: |
+          cd frontend
+          npm run test
+  
+  deploy:
     needs: test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Deploy to production
-      run: echo "Production deployment would happen here"
-      # 実際のデプロイコマンドをここに追加 
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install Dependencies
+        run: |
+          cd frontend
+          npm install
+      
+      - name: Build
+        run: |
+          cd frontend
+          npm run build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_ZENRIN_API_KEY: ${{ secrets.VITE_ZENRIN_API_KEY }}
+      
+      - name: Deploy to Cloudflare Pages
+        run: |
+          cd frontend
+          npm install -g wrangler
+          wrangler pages deploy dist --project-name legal-api-frontend
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }} 
