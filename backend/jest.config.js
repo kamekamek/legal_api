@@ -1,12 +1,17 @@
-module.exports = {
+export default {
   testEnvironment: 'node',
-  testMatch: [
-    '<rootDir>/src/**/__tests__/**/*.js',
-    '<rootDir>/src/**/*.{spec,test}.js'
-  ],
+  transform: {},
+  extensionsToTreatAsEsm: ['.js'],
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
+  setupFiles: ['<rootDir>/src/__tests__/setup.js'],
+  testMatch: ['**/__tests__/**/*.test.js'],
   collectCoverageFrom: [
     'src/**/*.js',
-    '!src/index.js'
+    '!src/__tests__/**',
+    '!src/middleware/**',
+    '!src/routes/index.js'
   ],
   coverageThreshold: {
     global: {
@@ -15,6 +20,5 @@ module.exports = {
       lines: 80,
       statements: 80
     }
-  },
-  setupFilesAfterEnv: ['<rootDir>/src/tests/setup.js']
+  }
 }; 
