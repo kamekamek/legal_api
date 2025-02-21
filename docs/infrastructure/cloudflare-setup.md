@@ -198,6 +198,166 @@ Proxy status: Proxied
    - Info
    - Debug
 
+## パフォーマンス最適化設定
+
+### 1. キャッシュ設定
+
+```yaml
+# Pages Rules設定
+URL Pattern: /*
+Settings:
+  - Cache Level: Cache Everything
+  - Edge Cache TTL: 2 hours
+  - Browser Cache TTL: 1 hour
+  - Always Online: On
+```
+
+### 2. 画像最適化
+
+1. "Speed" > "Optimization"に移動
+2. 以下の設定を有効化：
+   - Auto Minify (HTML, CSS, JavaScript)
+   - Brotli圧縮
+   - 画像最適化
+   - Rocket Loader
+
+### 3. ページルール
+
+```yaml
+# SPAルート設定
+URL Pattern: /*
+Settings:
+  - Always Use HTTPS: On
+  - Cache Level: Cache Everything
+  - Edge Cache TTL: 2 hours
+
+# APIエンドポイント設定
+URL Pattern: /api/*
+Settings:
+  - Cache Level: Bypass
+  - Security Level: High
+```
+
+## 開発環境設定
+
+### 1. ローカル開発
+
+```bash
+# Wrangler開発サーバー
+wrangler dev
+
+# Pages開発サーバー
+npm run dev
+```
+
+### 2. プレビュー環境
+
+1. プレビューブランチの設定
+```yaml
+Preview Branches:
+  - dev/*
+  - feature/*
+  - staging
+```
+
+2. 環境変数の分離
+```env
+# 開発環境
+[env.development]
+VITE_API_URL=https://dev.api.legal-service.com
+
+# ステージング環境
+[env.staging]
+VITE_API_URL=https://staging.api.legal-service.com
+```
+
+## CI/CD設定
+
+### 1. GitHub Actions連携
+
+```yaml
+# .github/workflows/cloudflare-deploy.yml
+name: Cloudflare Deploy
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Deploy to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+```
+
+### 2. デプロイメントフック
+
+1. "Pages" > "Settings" > "Builds & deployments"
+2. "Deploy Hooks"セクションで新規フック作成
+3. CI/CDパイプラインと連携
+
+## トラブルシューティング
+
+### 1. ビルドエラー対応
+
+1. Node.jsバージョンの確認
+```bash
+# .nvmrc
+v18.x
+```
+
+2. 依存関係の確認
+```bash
+npm ci
+npm audit fix
+```
+
+### 2. キャッシュ問題
+
+1. キャッシュのパージ
+```bash
+# 特定URLのキャッシュクリア
+wrangler pages deployment tail
+
+# 全キャッシュのパージ
+curl -X POST "https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache" \
+     -H "Authorization: Bearer {api_token}" \
+     -H "Content-Type: application/json" \
+     --data '{"purge_everything":true}'
+```
+
+## セキュリティ強化設定
+
+### 1. WAFカスタムルール
+
+```lua
+# レートリミット
+(http.request.uri.path contains "/api/") and (rate_limit("10s", 100))
+
+# 地域制限
+not (ip.geoip.country in {"JP", "US"})
+
+# 不正アクセス防止
+(http.request.uri.path contains "/admin/") and (not http.request.headers["CF-IPCountry"]=="JP")
+```
+
+### 2. セキュリティヘッダー
+
+```yaml
+# カスタムヘッダー設定
+Security Headers:
+  - X-Content-Type-Options: nosniff
+  - X-Frame-Options: DENY
+  - X-XSS-Protection: 1; mode=block
+  - Strict-Transport-Security: max-age=31536000; includeSubDomains
+  - Content-Security-Policy: default-src 'self'
+```
+
 ## 参考リンク
 
 - [Cloudflare Pages Documentation](https://developers.cloudflare.com/pages)

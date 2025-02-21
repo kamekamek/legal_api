@@ -159,4 +159,208 @@ curl https://legal-api-backend.{your-worker-subdomain}.workers.dev/api/projects
 
 - [Cloudflare Pages Documentation](https://developers.cloudflare.com/pages)
 - [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers)
-- [Vite Documentation](https://vitejs.dev/guide/) 
+- [Vite Documentation](https://vitejs.dev/guide/)
+
+## デプロイメントパイプライン
+
+### 1. 自動デプロイフロー
+
+```mermaid
+graph TD
+    A[Git Push] -->|トリガー| B[GitHub Actions]
+    B -->|ビルド| C[依存関係インストール]
+    C -->|テスト| D[単体テスト]
+    D -->|E2Eテスト| E[Cypress]
+    E -->|デプロイ| F[Cloudflare Pages]
+    E -->|デプロイ| G[Cloudflare Workers]
+```
+
+### 2. 環境別デプロイ設定
+
+```yaml
+# 開発環境
+Development:
+  Branch: dev
+  Domain: dev.legal-service.com
+  Auto Deploy: true
+  Build Command: npm run build:dev
+
+# ステージング環境
+Staging:
+  Branch: staging
+  Domain: staging.legal-service.com
+  Auto Deploy: true
+  Build Command: npm run build:staging
+
+# 本番環境
+Production:
+  Branch: main
+  Domain: legal-service.com
+  Auto Deploy: false
+  Approval Required: true
+  Build Command: npm run build:prod
+```
+
+## ロールバック手順
+
+### 1. フロントエンド（Cloudflare Pages）
+
+```bash
+# 特定バージョンへのロールバック
+wrangler pages deployment rollback <deployment-id>
+
+# 直前のデプロイメントへのロールバック
+wrangler pages deployment rollback --to-last
+```
+
+### 2. バックエンド（Cloudflare Workers）
+
+```bash
+# 特定バージョンの確認
+wrangler worker list-versions
+
+# ロールバック実行
+wrangler rollback <version>
+```
+
+## デプロイ後の検証
+
+### 1. 自動化テスト
+
+```bash
+# E2Eテスト実行
+npm run test:e2e
+
+# API健全性チェック
+npm run test:api
+
+# パフォーマンステスト
+npm run test:performance
+```
+
+### 2. 手動検証項目
+
+- [ ] ログイン/認証機能
+- [ ] API接続
+- [ ] フォーム送信
+- [ ] ファイルアップロード
+- [ ] PDFダウンロード
+- [ ] 検索機能
+
+## 監視設定
+
+### 1. アプリケーションログ
+
+```javascript
+// ログレベル設定
+const LOG_LEVELS = {
+  ERROR: 'error',
+  WARN: 'warn',
+  INFO: 'info',
+  DEBUG: 'debug'
+};
+
+// ログ出力設定
+const logger = {
+  error: (message, context) => {
+    console.error(JSON.stringify({
+      level: LOG_LEVELS.ERROR,
+      message,
+      context,
+      timestamp: new Date().toISOString()
+    }));
+  }
+  // 他のログレベルも同様に実装
+};
+```
+
+### 2. メトリクス収集
+
+```yaml
+# Cloudflareメトリクス設定
+Metrics:
+  - Request Count
+  - Error Rate
+  - Response Time
+  - Cache Hit Rate
+  - CPU Usage
+  - Memory Usage
+
+Alerts:
+  - Error Rate > 1%
+  - Response Time > 1s
+  - CPU Usage > 80%
+```
+
+## 緊急時対応
+
+### 1. デプロイ失敗時
+
+1. ログの確認
+```bash
+wrangler pages deployment tail
+```
+
+2. 即時ロールバック
+```bash
+wrangler pages deployment rollback --to-last
+```
+
+3. 障害報告
+```bash
+# Slackへの通知
+curl -X POST -H 'Content-type: application/json' \
+--data '{"text":"Deploy Failed: {details}"}' \
+$SLACK_WEBHOOK_URL
+```
+
+### 2. パフォーマンス問題
+
+1. キャッシュの確認と更新
+```bash
+# キャッシュ状態の確認
+wrangler pages deployment inspect
+
+# キャッシュのパージ
+wrangler pages deployment purge
+```
+
+2. スケーリング設定
+```yaml
+# Workers設定
+workers_dev: true
+usage_model: bundled
+compatibility_date: "2024-02-21"
+
+[triggers]
+crons = ["*/5 * * * *"]  # 5分ごとのヘルスチェック
+```
+
+## セキュリティ対策
+
+### 1. 環境変数の管理
+
+```bash
+# 環境変数の暗号化
+wrangler secret encrypt SUPABASE_URL
+wrangler secret encrypt SUPABASE_ANON_KEY
+
+# 環境変数のローテーション
+wrangler secret rotate --name SUPABASE_ANON_KEY
+```
+
+### 2. アクセス制御
+
+```yaml
+# IPアクセス制限
+IP_RULES:
+  - Allow: ["123.456.789.0/24"]  # オフィスIP
+  - Deny: ["*"]  # その他すべて
+
+# 認証設定
+AUTH_RULES:
+  - Path: "/api/admin/*"
+    Auth: "Bearer"
+  - Path: "/api/public/*"
+    Auth: "None"
+``` 
