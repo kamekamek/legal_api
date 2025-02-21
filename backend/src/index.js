@@ -1,3 +1,17 @@
+require('node:path');
+require('node:fs');
+require('node:http');
+require('node:crypto');
+require('node:buffer');
+require('node:stream');
+require('node:util');
+require('node:url');
+require('node:querystring');
+require('node:events');
+require('node:string_decoder');
+require('node:zlib');
+require('node:os');
+require('node:net');
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const app = require('./app');
