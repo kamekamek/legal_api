@@ -6,7 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>法規制情報検索</title>
     <!-- Zenrin Maps API -->
-    <script src="https://test-js.zmaps-api.com/zma_loader.js?key=%VITE_ZENRIN_API_KEY%&auth=referer"></script>
+    <script>
+      window.VITE_ZENRIN_API_KEY = '%VITE_ZENRIN_API_KEY%';
+    </script>
+    <script src="https://test-js.zmaps-api.com/zma_loader.js"></script>
     <style>
       body { margin: 0; padding: 0; }
       #root { height: 100vh; }
