@@ -1,6 +1,7 @@
-const express = require('express');
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -132,4 +133,4 @@ router.get('/projects/:id/building-calculations', async (req, res) => {
   }
 });
 
-module.exports = router; 
+export default router; 

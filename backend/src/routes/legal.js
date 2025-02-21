@@ -1,264 +1,191 @@
-const express = require('express');
-const router = express.Router();
-const { supabase } = require('../db/supabase');
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
 
-// 法令情報を取得
-router.get('/projects/:id/legal-info', async (req, res) => {
+const router = express.Router();
+
+// Supabaseクライアントの初期化
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
+
+// 法令情報取得エンドポイント
+router.get('/legal-info/:id', async (req, res) => {
   try {
     const { id } = req.params;
-
+    
+    // Supabaseから法令情報を取得
     const { data, error } = await supabase
       .from('legal_info')
       .select('*')
-      .eq('project_id', id)
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    
+    if (!data) {
+      return res.status(404).json({
+        error: '指定された法令情報が見つかりません'
+      });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('法令情報取得エラー:', error);
+    res.status(500).json({
+      error: '法令情報の取得に失敗しました'
+    });
+  }
+});
+
+// 法令情報登録エンドポイント
+router.post('/legal-info', async (req, res) => {
+  try {
+    const { title, content, category, tags } = req.body;
+
+    // バリデーション
+    if (!title || !content || !category) {
+      return res.status(400).json({
+        error: 'タイトル、内容、カテゴリーは必須です'
+      });
+    }
+
+    // Supabaseに法令情報を登録
+    const { data, error } = await supabase
+      .from('legal_info')
+      .insert([
+        {
+          title,
+          content,
+          category,
+          tags: tags || [],
+          created_at: new Date().toISOString()
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json(data);
+  } catch (error) {
+    console.error('法令情報登録エラー:', error);
+    res.status(500).json({
+      error: '法令情報の登録に失敗しました'
+    });
+  }
+});
+
+// 法令情報更新エンドポイント
+router.put('/legal-info/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, content, category, tags } = req.body;
+
+    // バリデーション
+    if (!title && !content && !category && !tags) {
+      return res.status(400).json({
+        error: '更新する項目が指定されていません'
+      });
+    }
+
+    // 更新データの準備
+    const updateData = {};
+    if (title) updateData.title = title;
+    if (content) updateData.content = content;
+    if (category) updateData.category = category;
+    if (tags) updateData.tags = tags;
+    updateData.updated_at = new Date().toISOString();
+
+    // Supabaseの法令情報を更新
+    const { data, error } = await supabase
+      .from('legal_info')
+      .update(updateData)
+      .eq('id', id)
+      .select()
       .single();
 
     if (error) throw error;
 
     if (!data) {
       return res.status(404).json({
-        status: 'error',
-        error: {
-          code: '404',
-          message: '法令情報が見つかりません'
-        }
+        error: '指定された法令情報が見つかりません'
       });
     }
 
-    // フロントエンドの表示形式に合わせてデータを整形
-    const formattedData = {
-      type: data.type || null,
-      fireArea: data.fire_area || null,
-      buildingCoverageRatio: data.building_coverage_ratio,
-      buildingCoverageRatio2: data.building_coverage_ratio2,
-      floorAreaRatio: data.floor_area_ratio,
-      heightDistrict: data.height_district || null,
-      heightDistrict2: data.height_district2 || null,
-      zoneMap: data.zone_map || null,
-      scenicZoneName: data.scenic_zone_name || null,
-      scenicZoneType: data.scenic_zone_type || null,
-      article48: data.article_48 || null,
-      appendix2: data.appendix_2 || null,
-      safetyOrdinance: data.safety_ordinance || null
-    };
-
-    res.json({
-      status: 'success',
-      data: formattedData
-    });
+    res.json(data);
   } catch (error) {
-    console.error('法令情報取得エラー:', error);
+    console.error('法令情報更新エラー:', error);
     res.status(500).json({
-      status: 'error',
-      error: {
-        code: '500',
-        message: '法令情報の取得に失敗しました'
-      }
+      error: '法令情報の更新に失敗しました'
     });
   }
 });
 
-// プロジェクトの告示文一覧を取得
-router.get('/projects/:id/kokuji', async (req, res) => {
+// 法令情報削除エンドポイント
+router.delete('/legal-info/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    // プロジェクトの存在確認
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .select('id')
-      .eq('id', id)
-      .single();
+    // Supabaseから法令情報を削除
+    const { error } = await supabase
+      .from('legal_info')
+      .delete()
+      .eq('id', id);
 
-    if (projectError || !project) {
-      return res.status(404).json({
-        status: 'error',
-        error: {
-          code: '404',
-          message: 'プロジェクトが見つかりません'
-        }
-      });
-    }
+    if (error) throw error;
 
-    // プロジェクトに関連する告示文を取得
-    const { data: kokujiList, error: kokujiError } = await supabase
-      .from('project_kokuji')
-      .select(`
-        id,
-        kokuji_id,
-        kokuji_text,
-        memo,
-        created_at,
-        updated_at
-      `)
-      .eq('project_id', id)
-      .order('created_at', { ascending: false });
-
-    if (kokujiError) throw kokujiError;
-
-    res.json({
-      status: 'success',
-      data: kokujiList || []
-    });
+    res.status(204).send();
   } catch (error) {
-    console.error('告示文一覧取得エラー:', error);
+    console.error('法令情報削除エラー:', error);
     res.status(500).json({
-      status: 'error',
-      error: {
-        code: '500',
-        message: '告示文一覧の取得に失敗しました'
-      }
+      error: '法令情報の削除に失敗しました'
     });
   }
 });
 
-// 告示文を保存
-router.post('/projects/:id/kokuji', async (req, res) => {
+// 法令情報一覧取得エンドポイント
+router.get('/legal-info', async (req, res) => {
   try {
-    const { id } = req.params;
-    const { kokuji_id, kokuji_text, memo } = req.body;
+    const { category, tag, page = 1, limit = 10 } = req.query;
+    
+    // クエリの構築
+    let query = supabase
+      .from('legal_info')
+      .select('*');
 
-    // プロジェクトの存在確認
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .select('id')
-      .eq('id', id)
-      .single();
-
-    if (projectError || !project) {
-      return res.status(404).json({
-        status: 'error',
-        error: {
-          code: '404',
-          message: 'プロジェクトが見つかりません'
-        }
-      });
+    // カテゴリーでフィルタリング
+    if (category) {
+      query = query.eq('category', category);
     }
 
-    // 告示文を保存
-    const { data, error } = await supabase
-      .from('project_kokuji')
-      .insert({
-        project_id: id,
-        kokuji_id,
-        kokuji_text,
-        memo
-      })
-      .select()
-      .single();
+    // タグでフィルタリング
+    if (tag) {
+      query = query.contains('tags', [tag]);
+    }
+
+    // ページネーション
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    query = query.range(from, to);
+
+    // データ取得
+    const { data, error, count } = await query;
 
     if (error) throw error;
 
     res.json({
-      status: 'success',
-      data
+      data,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: count
     });
   } catch (error) {
-    console.error('告示文保存エラー:', error);
+    console.error('法令情報一覧取得エラー:', error);
     res.status(500).json({
-      status: 'error',
-      error: {
-        code: '500',
-        message: '告示文の保存に失敗しました'
-      }
+      error: '法令情報一覧の取得に失敗しました'
     });
   }
 });
 
-// 法令情報を保存
-router.post('/projects/:id/legal-info', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const legalInfo = req.body;
-
-    // プロジェクトの存在確認
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .select('id')
-      .eq('id', id)
-      .single();
-
-    if (projectError || !project) {
-      return res.status(404).json({
-        status: 'error',
-        error: {
-          code: '404',
-          message: 'プロジェクトが見つかりません'
-        }
-      });
-    }
-
-    // 既存の法令情報を確認
-    const { data: existingInfo, error: existingError } = await supabase
-      .from('legal_info')
-      .select('id')
-      .eq('project_id', id)
-      .single();
-
-    let result;
-    if (existingInfo) {
-      // 更新
-      result = await supabase
-        .from('legal_info')
-        .update({
-          type: legalInfo.type,
-          fire_area: legalInfo.fire_area,
-          building_coverage_ratio: legalInfo.building_coverage_ratio,
-          building_coverage_ratio2: legalInfo.building_coverage_ratio2,
-          floor_area_ratio: legalInfo.floor_area_ratio,
-          height_district: legalInfo.height_district,
-          height_district2: legalInfo.height_district2,
-          zone_map: legalInfo.zone_map,
-          scenic_zone_name: legalInfo.scenic_zone_name,
-          scenic_zone_type: legalInfo.scenic_zone_type,
-          article_48: legalInfo.article_48,
-          appendix_2: legalInfo.appendix_2,
-          safety_ordinance: legalInfo.safety_ordinance,
-          updated_at: new Date()
-        })
-        .eq('project_id', id)
-        .select()
-        .single();
-    } else {
-      // 新規作成
-      result = await supabase
-        .from('legal_info')
-        .insert({
-          project_id: id,
-          type: legalInfo.type,
-          fire_area: legalInfo.fire_area,
-          building_coverage_ratio: legalInfo.building_coverage_ratio,
-          building_coverage_ratio2: legalInfo.building_coverage_ratio2,
-          floor_area_ratio: legalInfo.floor_area_ratio,
-          height_district: legalInfo.height_district,
-          height_district2: legalInfo.height_district2,
-          zone_map: legalInfo.zone_map,
-          scenic_zone_name: legalInfo.scenic_zone_name,
-          scenic_zone_type: legalInfo.scenic_zone_type,
-          article_48: legalInfo.article_48,
-          appendix_2: legalInfo.appendix_2,
-          safety_ordinance: legalInfo.safety_ordinance
-        })
-        .select()
-        .single();
-    }
-
-    if (result.error) throw result.error;
-
-    res.json({
-      status: 'success',
-      data: result.data
-    });
-  } catch (error) {
-    console.error('法令情報保存エラー:', error);
-    res.status(500).json({
-      status: 'error',
-      error: {
-        code: '500',
-        message: '法令情報の保存に失敗しました'
-      }
-    });
-  }
-});
-
-module.exports = router; 
+export default router; 

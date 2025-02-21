@@ -1,25 +1,25 @@
-require('node:path');
-require('node:fs');
-require('node:http');
-require('node:crypto');
-require('node:buffer');
-require('node:stream');
-require('node:util');
-require('node:url');
-require('node:querystring');
-require('node:events');
-require('node:string_decoder');
-require('node:zlib');
-require('node:os');
-require('node:net');
+import 'node:path';
+import 'node:fs';
+import 'node:http';
+import 'node:crypto';
+import 'node:buffer';
+import 'node:stream';
+import 'node:util';
+import 'node:url';
+import 'node:querystring';
+import 'node:events';
+import 'node:string_decoder';
+import 'node:zlib';
+import 'node:os';
+import 'node:net';
 
-const express = require('express');
-const cors = require('cors');
-const routes = require('./routes');
-const errorHandler = require('./middleware/errorHandler');
-const axios = require('axios');
-const buildingCalculationRouter = require('./routes/buildingCalculation');
-const legalRouter = require('./routes/legal');
+import express from 'express';
+import cors from 'cors';
+import routes from './routes';
+import errorHandler from './middleware/errorHandler';
+import axios from 'axios';
+import buildingCalculationRouter from './routes/buildingCalculation';
+import legalRouter from './routes/legal';
 
 const app = express();
 
@@ -224,4 +224,4 @@ app.use('/', routes);
 // エラーハンドリングミドルウェア
 app.use(errorHandler);
 
-module.exports = app; 
+export default app; 

@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import projectsRouter from './projects.js';
+
 const router = express.Router();
-const projectRoutes = require('./projects');
 
-router.use('/api/v1/projects', projectRoutes);
+router.use('/projects', projectsRouter);
 
-module.exports = router; 
+export default router; 

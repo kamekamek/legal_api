@@ -1,20 +1,22 @@
-require('node:path');
-require('node:fs');
-require('node:http');
-require('node:crypto');
-require('node:buffer');
-require('node:stream');
-require('node:util');
-require('node:url');
-require('node:querystring');
-require('node:events');
-require('node:string_decoder');
-require('node:zlib');
-require('node:os');
-require('node:net');
-require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
-const app = require('./app');
+import 'node:path';
+import 'node:fs';
+import 'node:http';
+import 'node:crypto';
+import 'node:buffer';
+import 'node:stream';
+import 'node:util';
+import 'node:url';
+import 'node:querystring';
+import 'node:events';
+import 'node:string_decoder';
+import 'node:zlib';
+import 'node:os';
+import 'node:net';
+import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
+import app from './app';
+
+dotenv.config();
 
 const PORT = process.env.PORT || 3001;
 
@@ -30,6 +32,13 @@ global.supabase = supabase;
 // デバッグ用（確認後は削除可）
 console.log('Supabase URL:', process.env.SUPABASE_URL);
 console.log('Supabase Key exists:', !!process.env.SUPABASE_ANON_KEY);
+
+// Cloudflare Workers用のfetchハンドラー
+export default {
+  async fetch(request, env, ctx) {
+    return app(request);
+  }
+};
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

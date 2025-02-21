@@ -1,20 +1,26 @@
 'use strict';
 
-const supabase = require('../config/supabase');
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
 // プロジェクト一覧の取得
-exports.getProjects = async (req, res, next) => {
+export const getProjects = async (req, res, next) => {
   try {
-    let query = supabase.from('projects').select('*');
-    
-    if (req.query.status) {
-      query = query.eq('status', req.query.status);
-    }
-    
-    const { data, error } = await query;
-    
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .order('created_at', { ascending: false });
+
     if (error) throw error;
-    res.json({ projects: data });
+
+    res.json({
+      status: 'success',
+      data: data || []
+    });
   } catch (error) {
     console.error('Projects fetch error:', error);
     next(error);
@@ -22,7 +28,7 @@ exports.getProjects = async (req, res, next) => {
 };
 
 // プロジェクト詳細の取得
-exports.getProject = async (req, res, next) => {
+export const getProject = async (req, res, next) => {
   try {
     const { data, error } = await supabase
       .from('projects')
@@ -43,50 +49,32 @@ exports.getProject = async (req, res, next) => {
 };
 
 // プロジェクトの作成
-exports.createProject = async (req, res, next) => {
+export const createProject = async (req, res, next) => {
   try {
-    // バリデーションを追加
-    const { name, description, status, location } = req.body;
-    if (!name || !status) {
-      return res.status(400).json({ 
-        error: '必須フィールドが不足しています',
-        details: {
-          name: !name ? 'プロジェクト名は必須です' : null,
-          status: !status ? 'ステータスは必須です' : null
-        }
-      });
-    }
+    const { name, description } = req.body;
 
-    // ステータスの値を検証
-    const validStatuses = ['planning', 'in_progress', 'completed', 'on_hold'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ 
-        error: '無効なステータスです',
-        details: {
-          status: `ステータスは${validStatuses.join(', ')}のいずれかである必要があります`
+    if (!name) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: '400',
+          message: 'プロジェクト名は必須です'
         }
       });
     }
 
     const { data, error } = await supabase
       .from('projects')
-      .insert([{
-        name,
-        description,
-        status,
-        location
-      }])
+      .insert({ name, description })
       .select()
       .single();
-    
-    if (error) {
-      if (error.code === '23505') {
-        return res.status(400).json({ error: 'プロジェクト名が既に使用されています' });
-      }
-      throw error;
-    }
-    
-    res.status(201).json(data);
+
+    if (error) throw error;
+
+    res.status(201).json({
+      status: 'success',
+      data
+    });
   } catch (error) {
     console.error('Project creation error:', error);
     next(error);
@@ -94,47 +82,44 @@ exports.createProject = async (req, res, next) => {
 };
 
 // プロジェクトの更新
-exports.updateProject = async (req, res, next) => {
+export const updateProject = async (req, res, next) => {
   try {
-    const { name, description, status, location } = req.body;
-    
-    // ステータスが提供された場合、その値を検証
-    if (status) {
-      const validStatuses = ['planning', 'in_progress', 'completed', 'on_hold'];
-      if (!validStatuses.includes(status)) {
-        return res.status(400).json({ 
-          error: '無効なステータスです',
-          details: {
-            status: `ステータスは${validStatuses.join(', ')}のいずれかである必要があります`
-          }
-        });
-      }
+    const { id } = req.params;
+    const { name, description } = req.body;
+
+    if (!name && !description) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: '400',
+          message: '更新するフィールドを指定してください'
+        }
+      });
     }
 
     const { data, error } = await supabase
       .from('projects')
-      .update({
-        ...(name && { name }),
-        ...(description !== undefined && { description }),
-        ...(status && { status }),
-        ...(location !== undefined && { location })
-      })
-      .eq('id', req.params.id)
+      .update({ name, description })
+      .eq('id', id)
       .select()
       .single();
-    
-    if (error) {
-      if (error.code === '23505') {
-        return res.status(400).json({ error: 'プロジェクト名が既に使用されています' });
-      }
-      throw error;
-    }
+
+    if (error) throw error;
 
     if (!data) {
-      return res.status(404).json({ error: 'プロジェクトが見つかりません' });
+      return res.status(404).json({
+        status: 'error',
+        error: {
+          code: '404',
+          message: 'プロジェクトが見つかりません'
+        }
+      });
     }
-    
-    res.json(data);
+
+    res.json({
+      status: 'success',
+      data
+    });
   } catch (error) {
     console.error('Project update error:', error);
     next(error);
@@ -142,14 +127,17 @@ exports.updateProject = async (req, res, next) => {
 };
 
 // プロジェクトの削除
-exports.deleteProject = async (req, res, next) => {
+export const deleteProject = async (req, res, next) => {
   try {
+    const { id } = req.params;
+
     const { error } = await supabase
       .from('projects')
       .delete()
-      .eq('id', req.params.id);
-    
+      .eq('id', id);
+
     if (error) throw error;
+
     res.status(204).send();
   } catch (error) {
     console.error('Project deletion error:', error);
