@@ -1,13 +1,6 @@
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
 
 const router = express.Router();
-
-// Supabaseクライアントの初期化
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
 
 // 法令情報取得エンドポイント
 router.get('/legal-info/:id', async (req, res) => {
@@ -15,7 +8,7 @@ router.get('/legal-info/:id', async (req, res) => {
     const { id } = req.params;
     
     // Supabaseから法令情報を取得
-    const { data, error } = await supabase
+    const { data, error } = await global.supabase
       .from('legal_info')
       .select('*')
       .eq('id', id)
@@ -51,7 +44,7 @@ router.post('/legal-info', async (req, res) => {
     }
 
     // Supabaseに法令情報を登録
-    const { data, error } = await supabase
+    const { data, error } = await global.supabase
       .from('legal_info')
       .insert([
         {
@@ -98,7 +91,7 @@ router.put('/legal-info/:id', async (req, res) => {
     updateData.updated_at = new Date().toISOString();
 
     // Supabaseの法令情報を更新
-    const { data, error } = await supabase
+    const { data, error } = await global.supabase
       .from('legal_info')
       .update(updateData)
       .eq('id', id)
@@ -128,7 +121,7 @@ router.delete('/legal-info/:id', async (req, res) => {
     const { id } = req.params;
 
     // Supabaseから法令情報を削除
-    const { error } = await supabase
+    const { error } = await global.supabase
       .from('legal_info')
       .delete()
       .eq('id', id);
@@ -150,7 +143,7 @@ router.get('/legal-info', async (req, res) => {
     const { category, tag, page = 1, limit = 10 } = req.query;
     
     // クエリの構築
-    let query = supabase
+    let query = global.supabase
       .from('legal_info')
       .select('*');
 

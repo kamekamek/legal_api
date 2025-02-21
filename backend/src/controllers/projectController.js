@@ -10,7 +10,7 @@ const supabase = createClient(
 // プロジェクト一覧の取得
 export const getProjects = async (req, res, next) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await global.supabase
       .from('projects')
       .select('*')
       .order('created_at', { ascending: false });
@@ -30,7 +30,7 @@ export const getProjects = async (req, res, next) => {
 // プロジェクト詳細の取得
 export const getProject = async (req, res, next) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await global.supabase
       .from('projects')
       .select('*')
       .eq('id', req.params.id)
@@ -63,7 +63,7 @@ export const createProject = async (req, res, next) => {
       });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await global.supabase
       .from('projects')
       .insert({ name, description })
       .select()
@@ -97,7 +97,7 @@ export const updateProject = async (req, res, next) => {
       });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await global.supabase
       .from('projects')
       .update({ name, description })
       .eq('id', id)
@@ -131,7 +131,7 @@ export const deleteProject = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const { error } = await supabase
+    const { error } = await global.supabase
       .from('projects')
       .delete()
       .eq('id', id);

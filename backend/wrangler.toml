@@ -5,6 +5,8 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ENVIRONMENT = "production"
+SUPABASE_URL = "your_supabase_url"
+SUPABASE_ANON_KEY = "your_supabase_anon_key"
 
 # Node.js互換性の設定
 node_compat = true
@@ -12,7 +14,9 @@ node_compat = true
 # 開発環境用の設定
 [env.development]
 name = "legal-api-backend-dev"
-vars = { ENVIRONMENT = "development" }
+vars.ENVIRONMENT = "development"
+vars.SUPABASE_URL = "your_development_supabase_url"
+vars.SUPABASE_ANON_KEY = "your_development_supabase_anon_key"
 node_compat = true
 
 # KV Namespaceの設定（必要な場合）

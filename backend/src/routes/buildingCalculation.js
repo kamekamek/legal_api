@@ -1,12 +1,6 @@
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
 
 const router = express.Router();
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
 
 // 建築可能面積の計算
 const calculateBuildableArea = (siteArea, coverageRatio) => {
@@ -88,7 +82,7 @@ router.post('/projects/:id/building-calculations', async (req, res) => {
       effective_ratio: req.body.effectiveRatio
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await global.supabase
       .from('building_calculations')
       .insert([calculationData]);
 
@@ -112,7 +106,7 @@ router.get('/projects/:id/building-calculations', async (req, res) => {
   try {
     const projectId = req.params.id;
 
-    const { data, error } = await supabase
+    const { data, error } = await global.supabase
       .from('building_calculations')
       .select('*')
       .eq('project_id', projectId)
