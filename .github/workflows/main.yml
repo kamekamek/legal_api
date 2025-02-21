@@ -1,0 +1,69 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    # フロントエンドのテスト
+    - name: Frontend - Install dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Frontend - Run tests
+      working-directory: ./frontend
+      run: npm test
+
+    - name: Frontend - Build
+      working-directory: ./frontend
+      run: npm run build
+
+    # バックエンドのテスト
+    - name: Backend - Install dependencies
+      working-directory: ./backend
+      run: npm ci
+
+    - name: Backend - Run tests
+      working-directory: ./backend
+      run: npm test
+
+  deploy-staging:
+    needs: test
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to staging
+      run: echo "Staging deployment would happen here"
+      # 実際のデプロイコマンドをここに追加
+
+  deploy-production:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to production
+      run: echo "Production deployment would happen here"
+      # 実際のデプロイコマンドをここに追加 

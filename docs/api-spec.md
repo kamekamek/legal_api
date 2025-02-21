@@ -1,0 +1,392 @@
+# API仕様書
+
+## 法令情報 API
+
+### 法令情報を取得
+
+```
+GET /api/v1/projects/:id/legal-info
+```
+
+#### パラメータ
+| パラメータ | 型 | 必須 | 説明 |
+|------------|-----|------|------|
+| id | string | ○ | プロジェクトID |
+
+#### レスポンス
+```json
+{
+  "status": "success",
+  "data": {
+    "type": "商業地域",
+    "fire_area": "防火地域",
+    "building_coverage_ratio": 80,
+    "building_coverage_ratio2": 60,
+    "floor_area_ratio": 400,
+    "height_district": "第三種高度地区",
+    "height_district2": "20m",
+    "zone_map": "市街化区域",
+    "scenic_zone_name": "○○風致地区",
+    "scenic_zone_type": "第一種",
+    "article_48": {
+      "allowed_uses": ["事務所", "店舗", "共同住宅"],
+      "restrictions": {
+        "type": "第一種住居地域",
+        "details": ["3000㎡以内の店舗", "事務所", "共同住宅"]
+      }
+    },
+    "appendix_2": {
+      "category": "第二種",
+      "restrictions": {
+        "height": "20m以下",
+        "noise": "50dB以下",
+        "other": ["日影規制あり", "開口部規制あり"]
+      }
+    },
+    "safety_ordinance": {
+      "articles": ["第30条", "第31条"],
+      "restrictions": {
+        "evacuation": ["2方向避難路の確保", "非常用照明の設置"],
+        "structure": ["耐火建築物", "準耐火建築物"]
+      }
+    }
+  }
+}
+```
+
+### 法令情報を保存
+
+```
+POST /api/v1/projects/:id/legal-info
+```
+
+#### パラメータ
+| パラメータ | 型 | 必須 | 説明 |
+|------------|-----|------|------|
+| id | string | ○ | プロジェクトID |
+
+#### リクエストボディ
+```json
+{
+  "type": "商業地域",
+  "fire_area": "防火地域",
+  "building_coverage_ratio": 80,
+  "building_coverage_ratio2": 60,
+  "floor_area_ratio": 400,
+  "height_district": "第三種高度地区",
+  "height_district2": "20m",
+  "zone_map": "市街化区域",
+  "scenic_zone_name": "○○風致地区",
+  "scenic_zone_type": "第一種",
+  "article_48": {
+    "allowed_uses": ["事務所", "店舗", "共同住宅"],
+    "restrictions": {
+      "type": "第一種住居地域",
+      "details": ["3000㎡以内の店舗", "事務所", "共同住宅"]
+    }
+  },
+  "appendix_2": {
+    "category": "第二種",
+    "restrictions": {
+      "height": "20m以下",
+      "noise": "50dB以下",
+      "other": ["日影規制あり", "開口部規制あり"]
+    }
+  },
+  "safety_ordinance": {
+    "articles": ["第30条", "第31条"],
+    "restrictions": {
+      "evacuation": ["2方向避難路の確保", "非常用照明の設置"],
+      "structure": ["耐火建築物", "準耐火建築物"]
+    }
+  }
+}
+```
+
+#### レスポンス
+```json
+{
+  "status": "success",
+  "data": {
+    // 更新された法令情報（リクエストボディと同じ構造）
+  }
+}
+```
+
+## エラーレスポンス
+
+```json
+{
+  "status": "error",
+  "error": {
+    "code": "string",
+    "message": "string"
+  }
+}
+```
+
+### エラーコード
+| コード | 説明 |
+|--------|------|
+| 400 | 不正なリクエスト |
+| 404 | プロジェクトが見つかりません |
+| 500 | サーバーエラー |
+
+## 実装計画
+
+### バックエンド実装（Express.js）
+
+1. データベーススキーマの更新
+   - `legal_info` テーブルの作成
+   - プロジェクトとの関連付け
+
+2. モデルの実装
+   ```javascript
+   // models/LegalInfo.js
+   class LegalInfo {
+     static async findByProjectId(projectId) { ... }
+     static async updateByProjectId(projectId, data) { ... }
+   }
+   ```
+
+3. ルーターの実装
+   ```javascript
+   // routes/legalInfo.js
+   router.get('/projects/:id/legal-info', getLegalInfo);
+   router.put('/projects/:id/legal-info', updateLegalInfo);
+   ```
+
+4. コントローラーの実装
+   ```javascript
+   // controllers/legalInfo.js
+   const getLegalInfo = async (req, res) => { ... }
+   const updateLegalInfo = async (req, res) => { ... }
+   ```
+
+5. バリデーションの実装
+   - リクエストデータの検証
+   - 型チェック
+   - 必須項目チェック
+
+### フロントエンド連携
+
+1. APIクライアントの実装
+   ```javascript
+   // services/legalInfoApi.js
+   export const fetchLegalInfo = async (projectId) => { ... }
+   export const updateLegalInfo = async (projectId, data) => { ... }
+   ```
+
+2. コンポーネントの更新
+   - ProjectDetail.jsxでの法令情報表示
+   - ZoneSearch.jsxでの保存機能連携
+
+### テスト実装
+
+1. ユニットテスト
+   - モデルのテスト
+   - コントローラーのテスト
+   - バリデーションのテスト
+
+2. 統合テスト
+   - APIエンドポイントのテスト
+   - データベース連携のテスト
+
+3. E2Eテスト
+   - フロントエンドからバックエンドまでの一連の流れのテスト
+
+### デプロイ計画
+
+1. データベースマイグレーション
+   - 新しいテーブルの作成
+   - 既存データの移行
+
+2. APIのデプロイ
+   - ステージング環境でのテスト
+   - 本番環境への段階的なデプロイ
+
+3. モニタリング
+   - エラーログの監視
+   - パフォーマンスの監視
+
+## 告示文 API
+
+### 告示文を取得
+
+```
+GET /api/v1/kokuji/:kokujiId
+```
+
+#### パラメータ
+| パラメータ | 型 | 必須 | 説明 |
+|------------|-----|------|------|
+| kokujiId | string | ○ | 告示ID（例: 412K500040001453） |
+
+#### レスポンス
+```json
+{
+  "status": "success",
+  "data": {
+    "kokuji_id": "string",    // 告示ID
+    "kokuji_text": "string"   // 告示文本文
+  }
+}
+```
+
+### プロジェクトの告示文一覧を取得
+
+```
+GET /api/v1/projects/:id/kokuji
+```
+
+#### パラメータ
+| パラメータ | 型 | 必須 | 説明 |
+|------------|-----|------|------|
+| id | string | ○ | プロジェクトID |
+
+#### レスポンス
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "kokuji_id": "string",
+      "kokuji_text": "string",
+      "memo": "string"
+    }
+  ]
+}
+```
+
+### プロジェクトに告示文を保存
+
+```
+POST /api/v1/projects/:id/kokuji
+```
+
+#### パラメータ
+| パラメータ | 型 | 必須 | 説明 |
+|------------|-----|------|------|
+| id | string | ○ | プロジェクトID |
+
+#### リクエストボディ
+```json
+{
+  "kokuji_id": "string",    // 告示ID
+  "kokuji_text": "string",  // 告示文本文
+  "memo": "string"          // メモ（任意）
+}
+```
+
+#### レスポンス
+```json
+{
+  "status": "success",
+  "data": {
+    "kokuji_id": "string",
+    "kokuji_text": "string",
+    "memo": "string"
+  }
+}
+```
+
+### データベーススキーマ
+
+```sql
+-- プロジェクト告示文テーブル
+create table public.project_kokuji (
+    id bigint generated by default as identity primary key,
+    project_id bigint references public.projects(id) on delete cascade,
+    kokuji_id text not null,
+    kokuji_text text not null,
+    memo text,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    created_by uuid references auth.users(id) on delete set null,
+    updated_by uuid references auth.users(id) on delete set null
+);
+
+-- Enable RLS
+alter table public.project_kokuji enable row level security;
+
+-- RLSポリシーの設定
+create policy "Enable read access for project members" on public.project_kokuji
+    for select using (
+        auth.uid() in (
+            select user_id
+            from public.project_members
+            where project_id = project_kokuji.project_id
+        )
+    );
+
+create policy "Enable insert/update for project members" on public.project_kokuji
+    for all using (
+        auth.uid() in (
+            select user_id
+            from public.project_members
+            where project_id = project_kokuji.project_id
+        )
+    );
+```
+
+### モデルの実装
+
+```javascript
+// models/ProjectKokuji.js
+class ProjectKokuji {
+  static async findByProjectId(projectId) { ... }
+  static async addToProject(projectId, kokujiId, kokujiText, memo) { ... }
+}
+```
+
+### バリデーション
+
+1. 告示IDのフォーマット検証
+   - 正規表現: `^412[A-Z][0-9]{12}$`
+   - 例: "412K500040001453"
+
+2. 必須項目チェック
+   - kokuji_id
+   - kokuji_text
+
+### エラーハンドリング
+
+1. 告示文が見つからない場合
+   ```json
+   {
+     "status": "error",
+     "error": {
+       "code": "KOKUJI_NOT_FOUND",
+       "message": "指定された告示文が見つかりません"
+     }
+   }
+   ```
+
+2. 不正な告示ID
+   ```json
+   {
+     "status": "error",
+     "error": {
+       "code": "INVALID_KOKUJI_ID",
+       "message": "不正な告示IDです"
+     }
+   }
+   ```
+
+### フロントエンド連携
+
+1. 告示文表示コンポーネント
+   ```javascript
+   // components/KokujiDialog.jsx
+   const KokujiDialog = ({ kokujiId, open, onClose }) => {
+     // 告示文の取得と表示
+   };
+   ```
+
+2. APIクライアント
+   ```javascript
+   // services/kokujiApi.js
+   export const fetchKokuji = async (kokujiId) => { ... }
+   export const fetchProjectKokuji = async (projectId) => { ... }
+   export const addKokujiToProject = async (projectId, kokujiId, kokujiText, memo) => { ... }
+   ``` 

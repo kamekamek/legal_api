@@ -93,7 +93,14 @@ app.get('/api/landuse', async (req, res) => {
       type: properties.youto?.toString() || '情報なし',
       fireArea: properties.bouka?.toString() || '情報なし',
       buildingCoverageRatio: (properties.kenpei?.toString() || '60').replace(/%/g, ''),
-      floorAreaRatio: (properties.yoseki?.toString() || '200').replace(/%/g, '')
+      floorAreaRatio: (properties.yoseki?.toString() || '200').replace(/%/g, ''),
+      heightDistrict: properties.koudo?.toString() || '0',
+      heightDistrict2: properties.koudo2?.toString() || '0',
+      zoneMap: properties.map?.toString() || '',
+      zoneMap2: properties.map2?.toString() || '',
+      buildingCoverageRatio2: properties.kenpei2?.toString() || '',
+      scenicZoneName: properties.f_meisho?.toString() || '',
+      scenicZoneType: properties.f_shu?.toString() || ''
     };
 
     res.json(regulationData);
