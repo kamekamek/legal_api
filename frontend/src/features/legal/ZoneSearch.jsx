@@ -398,11 +398,12 @@ const ZoneSearch = () => {
         return;
       }
 
-      const response = await axios.get(`http://localhost:3001/api/kokuji/${kokujiId}`, {
+      const response = await axios.get(`http://localhost:3001/api/v1/kokuji/${kokujiId}`, {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 10000 // 10秒でタイムアウト
       });
 
       console.log('告示文取得レスポンス:', response.data);
@@ -421,7 +422,13 @@ const ZoneSearch = () => {
         config: error.config
       });
 
-      const errorMessage = error.response?.data?.error || '告示文の取得に失敗しました';
+      let errorMessage = '告示文の取得に失敗しました';
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = '告示文の取得がタイムアウトしました';
+      } else if (error.response?.status === 404) {
+        errorMessage = '指定された告示文が見つかりませんでした';
+      }
+
       setKokujiText(errorMessage);
       setError(errorMessage);
     }

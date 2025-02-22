@@ -123,6 +123,15 @@ app.get('/api/v1/kokuji/:kokuji_id', async (req, res) => {
     const { kokuji_id } = req.params;
     console.log('告示文取得リクエスト開始:', { kokuji_id });
 
+    // kokuji_idの形式を検証
+    if (!kokuji_id.match(/^412[A-Z][0-9]{12}$/)) {
+      return res.status(400).json({
+        status: 'error',
+        error: '不正な告示ID形式です',
+        kokuji_id
+      });
+    }
+
     const response = await axios({
       method: 'GET',
       url: 'https://kokujiapi.azurewebsites.net/api/v1/getKokuji',
@@ -168,29 +177,27 @@ app.get('/api/v1/kokuji/:kokuji_id', async (req, res) => {
   } catch (error) {
     console.error('告示文取得エラー:', {
       message: error.message,
-      status: error.response?.status,
-      data: error.response?.data,
-      config: error.config
+      code: error.code,
+      response: error.response?.data
     });
 
-    if (error.response) {
-      res.status(error.response.status).json({
+    // エラーの種類に応じて適切なレスポンスを返す
+    if (error.code === 'ECONNABORTED') {
+      res.status(504).json({
         status: 'error',
-        error: '告示文の取得に失敗しました',
-        details: error.response.data,
+        error: '告示文の取得がタイムアウトしました',
         kokuji_id
       });
-    } else if (error.request) {
-      res.status(503).json({
+    } else if (error.response?.status === 404) {
+      res.status(404).json({
         status: 'error',
-        error: 'Azure APIからの応答がありません',
+        error: '指定された告示文が見つかりませんでした',
         kokuji_id
       });
     } else {
       res.status(500).json({
         status: 'error',
-        error: 'サーバー内部エラー',
-        details: error.message,
+        error: '告示文の取得中にエラーが発生しました',
         kokuji_id
       });
     }
