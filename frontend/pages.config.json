@@ -1,0 +1,8 @@
+{
+  "buildCommand": "npm run build",
+  "buildOutputDirectory": "dist",
+  "framework": "vite",
+  "environmentVariables": {
+    "VITE_API_URL": "https://legal-api-backend.nagare-0913.workers.dev"
+  }
+} 

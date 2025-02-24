@@ -1,7 +1,9 @@
 name = "legal-api-backend"
 main = "dist/index.js"
 compatibility_date = "2024-02-20"
-nodejs_compat = true
+
+# Node.js互換モードを有効化
+compatibility_flags = ["nodejs_compat"]
 
 [vars]
 # 本番環境の環境変数はCloudflareのUI上で設定
