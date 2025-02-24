@@ -1,14 +1,15 @@
 name = "legal-api-backend"
-type = "javascript"
-account_id = "852321b697292f45342af47cbb152cb7"
-workers_dev = true
+main = "dist/index.js"
 compatibility_date = "2024-02-20"
+node_compat = true
 
-# エントリーポイントを修正
-main = "dist/index.js"  # ビルド後のファイルを指定
+[vars]
+# 本番環境の環境変数
+# SUPABASE_URL = ""
+# SUPABASE_ANON_KEY = ""
 
-[env.production]
-vars = { ENVIRONMENT = "production" }
+[env.development]
+vars = { }  # 開発環境の環境変数
 
 [build]
 command = "npm run build" 
