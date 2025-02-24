@@ -13,6 +13,7 @@ import {
   Alert,
   FormHelperText
 } from '@mui/material';
+import { API_URL } from '../../config/api';
 
 const ProjectForm = () => {
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ const ProjectForm = () => {
       }
 
       try {
-        const response = await fetch(`http://localhost:3001/api/v1/projects/${id}`);
+        const response = await fetch(`${API_URL}/api/v1/projects/${id}`);
         if (!response.ok) {
           throw new Error('プロジェクトの取得に失敗しました');
         }
@@ -77,8 +78,8 @@ const ProjectForm = () => {
     setLoading(true);
     try {
       const url = id
-        ? `http://localhost:3001/api/v1/projects/${id}`
-        : 'http://localhost:3001/api/v1/projects';
+        ? `${API_URL}/api/v1/projects/${id}`
+        : `${API_URL}/api/v1/projects`;
       const method = id ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -204,4 +205,4 @@ const ProjectForm = () => {
   );
 };
 
-export default ProjectForm; 
+export default ProjectForm;

@@ -11,6 +11,7 @@ import {
   Divider
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { API_URL } from '../../../config/api';
 
 const KokujiDialog = ({ kokujiId, open, onClose }) => {
   const [kokujiData, setKokujiData] = useState(null);
@@ -25,7 +26,7 @@ const KokujiDialog = ({ kokujiId, open, onClose }) => {
       setError(null);
 
       try {
-        const response = await fetch(`http://localhost:3001/api/v1/kokuji/${kokujiId}`);
+        const response = await fetch(`${API_URL}/api/v1/kokuji/${kokujiId}`);
         if (!response.ok) {
           throw new Error('告示文の取得に失敗しました');
         }

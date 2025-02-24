@@ -36,6 +36,7 @@ import { parseHeightDistrict, parseScenicDistrict } from '../legal/utils/zoneUti
 import KokujiDialog from '../legal/components/KokujiDialog';
 import CloseIcon from '@mui/icons-material/Close';
 import BuildingCalculator from '../legal/BuildingCalculator';
+import { API_URL } from '../../config/api';
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -64,7 +65,7 @@ const ProjectDetail = () => {
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/v1/projects/${id}`);
+        const response = await fetch(`${API_URL}/api/v1/projects/${id}`);
         if (!response.ok) {
           throw new Error('プロジェクトの取得に失敗しました');
         }
@@ -73,7 +74,7 @@ const ProjectDetail = () => {
 
         // 法令情報を取得
         try {
-          const legalResponse = await fetch(`http://localhost:3001/api/v1/projects/${id}/legal-info`);
+          const legalResponse = await fetch(`${API_URL}/api/v1/projects/${id}/legal-info`);
           const legalData = await legalResponse.json();
           console.log('取得した法令情報:', legalData);
           
@@ -90,7 +91,7 @@ const ProjectDetail = () => {
 
         // 告示文一覧を取得
         try {
-          const kokujiResponse = await fetch(`http://localhost:3001/api/v1/projects/${id}/kokuji`);
+          const kokujiResponse = await fetch(`${API_URL}/api/v1/projects/${id}/kokuji`);
           const kokujiData = await kokujiResponse.json();
           console.log('取得した告示文一覧:', kokujiData);
           
@@ -117,7 +118,7 @@ const ProjectDetail = () => {
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/projects/${id}`, {
+      const response = await fetch(`${API_URL}/api/v1/projects/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
@@ -132,7 +133,7 @@ const ProjectDetail = () => {
 
   const handleLegalInfoUpdate = async (updatedInfo) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/legal/update/${id}`, {
+      const response = await fetch(`${API_URL}/api/v1/legal/update/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -161,7 +162,7 @@ const ProjectDetail = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/legal/zone/info?address=${encodeURIComponent(project.location)}`);
+      const response = await fetch(`${API_URL}/api/v1/legal/zone/info?address=${encodeURIComponent(project.location)}`);
       if (!response.ok) {
         throw new Error('用途地域情報の取得に失敗しました');
       }

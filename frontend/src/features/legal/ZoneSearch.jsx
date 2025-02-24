@@ -37,6 +37,7 @@ import {
   parseRatios,
   ZONE_DIVISION_MAPPING
 } from '../../constants/zoneTypes';
+import { API_URL } from '../../config/api';
 
 // 告示文ダイアログコンポーネントを汎用的な法令テキストダイアログに変更
 const LegalTextDialog = ({ open, onClose, title, content }) => {
@@ -689,7 +690,7 @@ const ZoneSearch = () => {
       };
 
       // 法令情報を保存
-      const response = await fetch(`http://localhost:3001/api/v1/projects/${projectId}/legal-info`, {
+      const response = await fetch(`${API_URL}/api/v1/projects/${projectId}/legal-info`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -706,7 +707,7 @@ const ZoneSearch = () => {
 
       // 告示文を保存（存在する場合）
       if (kokujiText) {
-        const kokujiResponse = await fetch(`http://localhost:3001/api/v1/projects/${projectId}/kokuji`, {
+        const kokujiResponse = await fetch(`${API_URL}/api/v1/projects/${projectId}/kokuji`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -23,6 +23,7 @@ import {
 import CalculateIcon from '@mui/icons-material/Calculate';
 import HistoryIcon from '@mui/icons-material/History';
 import SaveIcon from '@mui/icons-material/Save';
+import { API_URL } from '../../config/api';
 
 const BuildingCalculator = ({ projectId, legalInfo }) => {
   const [formData, setFormData] = useState({
@@ -54,7 +55,7 @@ const BuildingCalculator = ({ projectId, legalInfo }) => {
 
   const fetchCalculationHistory = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/projects/${projectId}/building-calculations`);
+      const response = await fetch(`${API_URL}/api/v1/projects/${projectId}/building-calculations`);
       if (!response.ok) throw new Error('計算履歴の取得に失敗しました');
       const data = await response.json();
       setHistory(data.data || []);
@@ -76,7 +77,7 @@ const BuildingCalculator = ({ projectId, legalInfo }) => {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/projects/${projectId}/building-calculation`, {
+      const response = await fetch(`${API_URL}/api/v1/projects/${projectId}/building-calculation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -103,7 +104,7 @@ const BuildingCalculator = ({ projectId, legalInfo }) => {
     if (!calculationResult) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/projects/${projectId}/building-calculations`, {
+      const response = await fetch(`${API_URL}/api/v1/projects/${projectId}/building-calculations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

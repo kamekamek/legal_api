@@ -8,6 +8,7 @@ import {
   Autocomplete,
   Paper
 } from '@mui/material';
+import { API_URL } from '../../config/api';
 
 const AddressSearch = ({ onZoneInfoFound }) => {
   const [address, setAddress] = useState('');
@@ -26,7 +27,7 @@ const AddressSearch = ({ onZoneInfoFound }) => {
       setError(null);
       
       // ZENRIN APIを使用して住所検索
-      const response = await fetch(`http://localhost:3001/api/v1/legal/address/search?q=${encodeURIComponent(searchText)}`);
+      const response = await fetch(`${API_URL}/api/v1/legal/address/search?q=${encodeURIComponent(searchText)}`);
       if (!response.ok) {
         throw new Error('住所検索に失敗しました');
       }
@@ -49,7 +50,7 @@ const AddressSearch = ({ onZoneInfoFound }) => {
       setError(null);
 
       // 選択された住所の用途地域情報を取得
-      const response = await fetch(`http://localhost:3001/api/v1/legal/zone/info?address=${encodeURIComponent(selectedAddress)}`);
+      const response = await fetch(`${API_URL}/api/v1/legal/zone/info?address=${encodeURIComponent(selectedAddress)}`);
       if (!response.ok) {
         throw new Error('用途地域情報の取得に失敗しました');
       }
