@@ -1,6 +1,7 @@
-const express = require('express');
+import express from 'express';
+import { supabase } from '../lib/supabase.js';
+
 const router = express.Router();
-const { supabase } = require('../db/supabase');
 
 // 法令情報を取得
 router.get('/projects/:id/legal-info', async (req, res) => {
@@ -261,4 +262,4 @@ router.post('/projects/:id/legal-info', async (req, res) => {
   }
 });
 
-module.exports = router; 
+export default router; 

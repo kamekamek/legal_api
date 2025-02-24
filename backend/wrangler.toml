@@ -1,0 +1,11 @@
+name = "legal-api-backend"
+type = "javascript"
+account_id = "your_account_id"
+workers_dev = true
+compatibility_date = "2024-02-20"
+
+[env.production]
+vars = { ENVIRONMENT = "production" }
+
+[build]
+command = "npm run build" 

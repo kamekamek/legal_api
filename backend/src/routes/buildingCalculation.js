@@ -1,11 +1,7 @@
-const express = require('express');
-const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
+import express from 'express';
+import { supabase } from '../lib/supabase.js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+const router = express.Router();
 
 // 建築可能面積の計算
 const calculateBuildableArea = (siteArea, coverageRatio) => {
@@ -132,4 +128,4 @@ router.get('/projects/:id/building-calculations', async (req, res) => {
   }
 });
 
-module.exports = router; 
+export default router; 

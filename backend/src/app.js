@@ -1,10 +1,10 @@
-const express = require('express');
-const cors = require('cors');
-const routes = require('./routes');
-const errorHandler = require('./middleware/errorHandler');
-const axios = require('axios');
-const buildingCalculationRouter = require('./routes/buildingCalculation');
-const legalRouter = require('./routes/legal');
+import express from 'express';
+import cors from 'cors';
+import routes from './routes/index.js';
+import errorHandler from './middleware/errorHandler.js';
+import axios from 'axios';
+import buildingCalculationRouter from './routes/buildingCalculation.js';
+import legalRouter from './routes/legal.js';
 
 const app = express();
 
@@ -216,4 +216,5 @@ app.use('/', routes);
 // エラーハンドリングミドルウェア
 app.use(errorHandler);
 
-module.exports = app; 
+// デフォルトエクスポートを追加
+export default app; 

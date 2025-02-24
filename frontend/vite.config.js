@@ -7,5 +7,18 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true
+  },
+  // Cloudflareのために追加
+  build: {
+    target: 'esnext',
+    outDir: 'dist',
+    assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+        }
+      }
+    }
   }
 })
