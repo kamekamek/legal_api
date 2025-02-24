@@ -1,4 +1,4 @@
-import { Router } from 'itty-router/Router'
+import { Router } from 'itty-router'
 import { createClient } from '@supabase/supabase-js'
 
 // ルーターの作成
@@ -54,7 +54,5 @@ router.all('*', () => new Response('Not Found', { status: 404 }))
 
 // メインのリクエストハンドラー
 export default {
-  async fetch(request, env, ctx) {
-    return router.handle(request, env, ctx)
-  }
+  fetch: router.handle
 } 

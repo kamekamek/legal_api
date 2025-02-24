@@ -1,7 +1,7 @@
 name = "legal-api-backend"
 main = "dist/index.js"
 compatibility_date = "2024-02-20"
-node_compat = true
+nodejs_compat = true
 
 [vars]
 # 本番環境の環境変数はCloudflareのUI上で設定

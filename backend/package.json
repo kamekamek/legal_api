@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "build": "esbuild src/index.js --bundle --outfile=dist/index.js --format=esm --platform=neutral --external:@supabase/supabase-js --external:itty-router",
+    "build": "esbuild src/index.js --bundle --outfile=dist/index.js --format=esm --platform=neutral --external:itty-router --external:@supabase/supabase-js",
     "deploy": "wrangler deploy",
     "test": "jest"
   },
@@ -13,11 +13,11 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/supabase-js": "latest",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "itty-router": "^3.0.12",
+    "itty-router": "^5.0.18",
     "pg": "^8.11.3"
   },
   "devDependencies": {
