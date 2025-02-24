@@ -4,6 +4,9 @@ account_id = "852321b697292f45342af47cbb152cb7"
 workers_dev = true
 compatibility_date = "2024-02-20"
 
+# エントリーポイントを修正
+main = "dist/index.js"  # ビルド後のファイルを指定
+
 [env.production]
 vars = { ENVIRONMENT = "production" }
 

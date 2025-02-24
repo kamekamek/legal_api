@@ -1,51 +1,43 @@
-import dotenv from 'dotenv';
-import app from './app.js';
+import { Router } from 'itty-router'
 
-dotenv.config();
+// ルーターの作成
+const router = Router()
 
-const PORT = process.env.PORT || 3001;
+// CORSヘッダーを設定する関数
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// プロジェクト一覧を取得
+router.get('/api/projects', async () => {
+  try {
+    // Supabaseからデータを取得する処理をここに実装
+    const projects = [] // 仮のレスポンス
+    return new Response(JSON.stringify(projects), {
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    })
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    })
+  }
+})
 
-// Cloudflare Workers用のエクスポート
+// OPTIONSリクエストに対するCORS対応
+router.options('*', () => new Response(null, { headers: corsHeaders }))
+
+// メインのリクエストハンドラー
 export default {
   async fetch(request, env, ctx) {
-    // CORSヘッダーの設定
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    }
-
-    // Optionsリクエストの処理
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: corsHeaders
-      })
-    }
-
-    // Supabaseクライアントの初期化
-    const supabase = createClient(
-      env.SUPABASE_URL,
-      env.SUPABASE_ANON_KEY
-    )
-
-    try {
-      // APIルーティングの処理
-      const url = new URL(request.url)
-      // ... ルーティングロジック
-    } catch (error) {
-      return new Response(JSON.stringify({
-        error: 'Internal Server Error'
-      }), {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        }
-      })
-    }
+    return router.handle(request, env, ctx)
   }
 } 
