@@ -25,7 +25,14 @@ const ProjectList = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/v1/projects`);
+        const response = await fetch(`${API_URL}/api/v1/projects`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          mode: 'cors',
+          credentials: 'include'
+        });
         if (!response.ok) {
           throw new Error('プロジェクトの取得に失敗しました');
         }
