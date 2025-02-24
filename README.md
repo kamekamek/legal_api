@@ -15,8 +15,9 @@
 
 ## 必要要件
 
-- Node.js (v16以上)
-- npm
+- Node.js (v18.x以上)
+- pnpm
+- Wrangler CLI (Cloudflare Workers用)
 - ZenrinAPI アクセスキー
 
 ## セットアップ手順
@@ -27,46 +28,88 @@ git clone [repository-url]
 cd legal_api
 ```
 
-2. バックエンドのセットアップ
+2. Wrangler CLIのインストール
+```bash
+npm install -g wrangler
+wrangler login  # Cloudflareアカウントにログイン
+```
+
+3. バックエンドのセットアップ
 ```bash
 cd backend
 npm install
 ```
 
-3. フロントエンドのセットアップ
+4. フロントエンドのセットアップ
 ```bash
-cd ../frontend
-npm install
+cd frontend
+pnpm install
 ```
 
-4. 環境変数の設定
+5. 環境変数の設定
 
-`backend/.env`ファイルを作成し、以下の内容を設定：
-```
-PORT=3001
+`backend/.env`ファイルを作成:
+```env
 ZENRIN_API_KEY=your_api_key_here
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+```
+
+`frontend/.env`ファイルを作成:
+```env
+VITE_API_URL=http://localhost:8787
+VITE_ZENRIN_API_KEY=your_api_key_here
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 CORS_ORIGIN=http://localhost:5173
 ```
 
-※ `your_api_key_here`は実際のZenrinAPIキーに置き換えてください。
+※ 各`your_xxx_here`は実際のAPIキーに置き換えてください。
 
-## 起動方法
+## 開発環境での起動方法
 
-1. バックエンドの起動
+1. バックエンドの起動（Cloudflare Workers）
 ```bash
 cd backend
-npm start
+wrangler dev --port 8787
 ```
 
 2. フロントエンドの起動（新しいターミナルで）
 ```bash
 cd frontend
-npm run dev
+pnpm dev
 ```
 
 3. ブラウザでアプリケーションにアクセス
 ```
 http://localhost:5173
+```
+
+## 本番環境へのデプロイ
+
+### バックエンドのデプロイ（Cloudflare Workers）
+
+1. 環境変数の設定
+- Cloudflareダッシュボードで環境変数を設定
+  - `ZENRIN_API_KEY`
+  - `CORS_ALLOWED_ORIGINS`
+
+2. デプロイ実行
+```bash
+cd backend
+wrangler deploy
+```
+
+### フロントエンドのデプロイ（Cloudflare Pages）
+
+1. ビルド
+```bash
+cd frontend
+pnpm build
+```
+
+2. デプロイ
+```bash
+wrangler pages deploy dist
 ```
 
 ## 使用方法
@@ -89,30 +132,53 @@ http://localhost:5173
 - 建物名での検索はできません
 - 郵便番号での検索はできません
 
-3. 注意事項
-- 住所は正確に入力してください
-- 一部の地域では、詳細な用途地域情報が取得できない場合があります
-- システムの都合上、検索結果が表示されるまで数秒かかる場合があります
-
 ## 使用技術
 
-- フロントエンド
-  - React
-  - Vite
-  - Material-UI
-  - Leaflet (地図表示)
-  - Axios (API通信)
+### フロントエンド
+- React + TypeScript
+- Vite
+- TailwindCSS
+- React Query
+- React Router
+- Leaflet (地図表示)
 
-- バックエンド
-  - Node.js
-  - Express
-  - dotenv (環境変数管理)
-  - cors (CORS対応)
+### バックエンド
+- Cloudflare Workers
+- Node.js
 
-## 注意事項
+### インフラ
+- Cloudflare Pages (フロントエンド)
+- Cloudflare Workers (バックエンド)
+- Supabase (データベース)
 
-- ZenrinAPIキーは必ず`.env`ファイルで管理し、公開リポジトリにコミットしないようご注意ください。
-- 本番環境にデプロイする場合は、適切なセキュリティ対策を実施してください。
+## 開発時の注意事項
+
+### APIエンドポイント
+- 開発環境: `http://localhost:8787`
+- 本番環境: `https://legal-api-backend.nagare-0913.workers.dev`
+
+### CORS設定
+- 開発環境: `http://localhost:5173`からのリクエストを許可
+- 本番環境: `https://legal-api-frontend.pages.dev`からのリクエストを許可
+
+### 環境変数の管理
+- 機密情報は`.env`ファイルで管理
+- 本番環境の環境変数はCloudflareのダッシュボードで設定
+
+### トラブルシューティング
+
+1. CORS エラー
+- 環境変数`CORS_ALLOWED_ORIGINS`が正しく設定されているか確認
+- バックエンドのCORS設定を確認
+
+2. API接続エラー
+- バックエンドサーバーが起動しているか確認
+- 環境変数`VITE_API_URL`が正しく設定されているか確認
+- Wranglerが正しくログインしているか確認
+
+3. ビルドエラー
+- 依存関係が正しくインストールされているか確認
+- Node.jsのバージョンが18.x以上か確認
 
 ## ライセンス
 
