@@ -1094,7 +1094,19 @@ const ZoneSearch = () => {
                           ) : '−'
                         }
                       />
-                      <InfoRow label="東京都建築安全条例" value="準備中" />
+                      <InfoRow 
+                        label="東京都建築安全条例" 
+                        value={
+                          <Button
+                            variant="contained"
+                            onClick={() => handleOpenDialog('東京都建築安全条例', '準備中')}
+                            size="small"
+                            sx={{ ml: 'auto' }}
+                          >
+                            条文を表示
+                          </Button>
+                        } 
+                      />
                     </Box>
                   </Box>
                 </Box>
