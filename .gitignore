@@ -39,6 +39,7 @@ yarn-error.log*
 /backend/node_modules/
 /backend/.env
 /backend/dist/
+/backend/.wrangler/
 
 # Misc
 *.log
