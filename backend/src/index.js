@@ -5,11 +5,17 @@ import { createClient } from '@supabase/supabase-js'
 const router = Router()
 
 // CORSヘッダーを設定する関数
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-}
+const corsHeaders = (request) => {
+  const allowedOrigins = env.CORS_ALLOWED_ORIGINS.split(',');
+  const origin = request.headers.get('Origin');
+  const isAllowed = allowedOrigins.includes(origin);
+
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+};
 
 // Supabaseクライアントの初期化
 const initSupabase = (env) => {
@@ -30,7 +36,7 @@ router.get('/api/projects', async (request, env) => {
     return new Response(JSON.stringify({ data }), {
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(request)
       }
     })
   } catch (error) {
@@ -40,14 +46,14 @@ router.get('/api/projects', async (request, env) => {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders
+        ...corsHeaders(request)
       }
     })
   }
 })
 
 // OPTIONSリクエストに対するCORS対応
-router.options('*', () => new Response(null, { headers: corsHeaders }))
+router.options('*', (request) => new Response(null, { headers: corsHeaders(request) }))
 
 // 404ハンドラー
 router.all('*', () => new Response('Not Found', { status: 404 }))
