@@ -4,9 +4,7 @@ compatibility_date = "2024-02-20"
 node_compat = true
 
 [vars]
-# 本番環境の環境変数
-# SUPABASE_URL = ""
-# SUPABASE_ANON_KEY = ""
+# 本番環境の環境変数はCloudflareのUI上で設定
 
 [env.development]
 vars = { }  # 開発環境の環境変数
