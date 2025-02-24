@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
+import { API_URL } from '../../config/api';
 
 const ProjectList = () => {
   const [projects, setProjects] = useState([]);
@@ -24,7 +25,7 @@ const ProjectList = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/v1/projects');
+        const response = await fetch(`${API_URL}/api/v1/projects`);
         if (!response.ok) {
           throw new Error('プロジェクトの取得に失敗しました');
         }
