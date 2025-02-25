@@ -354,7 +354,7 @@ const ZoneSearch = () => {
 
   const fetchLandUseInfo = async (lat, lng) => {
     try {
-      const response = await axios.get('http://localhost:3001/api/landuse', {
+      const response = await axios.get(`${API_URL}/api/v1/legal/landuse`, {
         params: { lat, lng }
       });
 
@@ -399,7 +399,7 @@ const ZoneSearch = () => {
         return;
       }
 
-      const response = await axios.get(`http://localhost:3001/api/v1/kokuji/${kokujiId}`, {
+      const response = await axios.get(`${API_URL}/api/v1/kokuji/${kokujiId}`, {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
@@ -587,7 +587,7 @@ const ZoneSearch = () => {
         markerRef.current = new window.ZDC.Marker(new window.ZDC.LatLng(lat, lng));
         map.addWidget(markerRef.current);
 
-        const landUseResponse = await axios.get('http://localhost:3001/api/landuse', {
+        const landUseResponse = await axios.get(`${API_URL}/api/v1/legal/landuse`, {
           params: {
             lat: lat,
             lng: lng

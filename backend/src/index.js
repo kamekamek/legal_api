@@ -442,6 +442,40 @@ async function getKokujiById(env, kokujiId) {
   }
 }
 
+// 用途地域情報取得関数（座標指定）
+async function getLandUseInfo(env, lat, lng) {
+  try {
+    // ZENRINのAPIキーを取得
+    const apiKey = env.ZENRIN_API_KEY;
+    if (!apiKey) {
+      throw new Error('ZENRIN_API_KEYが設定されていません');
+    }
+
+    // ZENRINのAPIを呼び出す
+    const response = await fetch(
+      `https://api.zenrin.jp/legal/landuse?lat=${lat}&lng=${lng}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('用途地域情報の取得に失敗しました');
+    }
+
+    const data = await response.json();
+    return {
+      status: 'success',
+      data: data
+    };
+  } catch (error) {
+    console.error('Error getting landuse info:', error);
+    throw error;
+  }
+}
+
 // メインのリクエストハンドラー
 export default {
   async fetch(request, env, ctx) {
@@ -632,6 +666,40 @@ export default {
           );
         }
         const data = await getZoneInfo(env, address);
+        return new Response(
+          JSON.stringify(data),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders(request)
+            }
+          }
+        );
+      }
+
+      // 用途地域情報取得エンドポイント（座標指定）
+      if (path === '/api/v1/legal/landuse' && request.method === 'GET') {
+        const lat = url.searchParams.get('lat');
+        const lng = url.searchParams.get('lng');
+        if (!lat || !lng) {
+          return new Response(
+            JSON.stringify({ 
+              status: 'error',
+              error: {
+                code: '400',
+                message: '緯度・経度が指定されていません'
+              }
+            }),
+            {
+              status: 400,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(request)
+              }
+            }
+          );
+        }
+        const data = await getLandUseInfo(env, lat, lng);
         return new Response(
           JSON.stringify(data),
           {
