@@ -417,25 +417,47 @@ async function saveBuildingCalculation(env, projectId, calculationData) {
 // 告示文詳細を取得する関数
 async function getKokujiById(env, kokujiId) {
   try {
-    const supabase = initSupabase(env);
-    const { data, error } = await supabase
-      .from('kokuji')
-      .select('*')
-      .eq('kokuji_id', kokujiId)
-      .single();
-
-    if (error) throw error;
-    if (!data) {
-      throw new Error('告示文が見つかりません');
+    // kokujiIdの形式を検証
+    if (!kokujiId.match(/^412[A-Z][0-9]{12}$/)) {
+      throw new Error('不正な告示ID形式です');
     }
 
-    return {
-      status: 'success',
-      data: {
-        kokuji_id: data.kokuji_id,
-        kokuji_text: data.kokuji_text
+    // 外部APIから告示文を取得
+    const response = await fetch(`https://kokujiapi.azurewebsites.net/api/v1/getKokuji?kokuji_id=${kokujiId}&response_format=plain`, {
+      method: 'GET',
+      headers: {
+        'accept': 'application/xml'
       }
-    };
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('指定された告示文が見つかりませんでした');
+      }
+      throw new Error('告示文の取得中にエラーが発生しました');
+    }
+
+    const responseText = await response.text();
+    
+    if (responseText) {
+      let kokujiText = responseText;
+      // <Law>タグの中身のみを抽出
+      const match = /<Law>([\s\S]*?)<\/Law>/g.exec(kokujiText);
+      if (match && match[1]) {
+        kokujiText = match[1].trim();
+      }
+
+      return {
+        status: 'success',
+        data: {
+          kokuji_text: kokujiText,
+          kokuji_id: kokujiId,
+          updated_at: new Date().toISOString()
+        }
+      };
+    } else {
+      throw new Error('告示文が見つかりません');
+    }
   } catch (error) {
     console.error('Error fetching kokuji:', error);
     throw error;
@@ -457,10 +479,10 @@ async function getLandUseInfo(env, lat, lng) {
     const url = 'https://test-web.zmaps-api.com/map/wms/youto';
     
     // 座標を EPSG:4326 から EPSG:3857 に変換
-    const lon = parseFloat(lng);
-    const lat = parseFloat(lat);
-    const x = lon * 20037508.34 / 180;
-    const y = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180) * 20037508.34 / 180;
+    const longitude = parseFloat(lng);
+    const latitude = parseFloat(lat);
+    const x = longitude * 20037508.34 / 180;
+    const y = Math.log(Math.tan((90 + latitude) * Math.PI / 360)) / (Math.PI / 180) * 20037508.34 / 180;
     
     // バッファを追加（約500mの範囲）
     const buffer = 500;
@@ -486,16 +508,16 @@ async function getLandUseInfo(env, lat, lng) {
     };
 
     // 正しい認証ヘッダーを使用
+    const queryParams = new URLSearchParams(wmsParams).toString();
     const response = await fetch(
-      `${url}`,
+      `${url}?${queryParams}`,
       {
         method: 'GET',
         headers: {
           'x-api-key': apiKey,
           'Authorization': 'referer',
           'Referer': 'https://legal-api-frontend.pages.dev/'
-        },
-        params: wmsParams
+        }
       }
     );
     
@@ -639,16 +661,44 @@ export default {
       // 告示文詳細取得エンドポイント
       if (path.match(/^\/api\/v1\/kokuji\/[^\/]+$/) && request.method === 'GET') {
         const kokujiId = path.split('/').pop();
-        const data = await getKokujiById(env, kokujiId);
-        return new Response(
-          JSON.stringify(data),
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders(request)
+        try {
+          const data = await getKokujiById(env, kokujiId);
+          return new Response(
+            JSON.stringify(data),
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(request)
+              }
             }
+          );
+        } catch (error) {
+          console.error('Error handling request:', error);
+          let status = 500;
+          let errorMessage = '告示文の取得に失敗しました';
+          
+          if (error.message.includes('不正な告示ID形式')) {
+            status = 400;
+            errorMessage = error.message;
+          } else if (error.message.includes('見つかりません')) {
+            status = 404;
+            errorMessage = error.message;
           }
-        );
+          
+          return new Response(
+            JSON.stringify({ 
+              status: 'error', 
+              error: errorMessage 
+            }),
+            {
+              status,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(request)
+              }
+            }
+          );
+        }
       }
 
       // 住所検索エンドポイント

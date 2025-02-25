@@ -28,12 +28,13 @@ const KokujiDialog = ({ kokujiId, open, onClose }) => {
       try {
         const response = await fetch(`${API_URL}/api/v1/kokuji/${kokujiId}`);
         if (!response.ok) {
-          throw new Error('告示文の取得に失敗しました');
+          const errorData = await response.json();
+          throw new Error(errorData.error || '告示文の取得に失敗しました');
         }
         const data = await response.json();
         setKokujiData(data.data);
       } catch (error) {
-        console.error('Error fetching kokuji:', error);
+        console.error('告示文取得エラー:', error);
         setError(error.message);
       } finally {
         setLoading(false);
