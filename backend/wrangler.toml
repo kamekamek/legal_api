@@ -1,9 +1,8 @@
 name = "legal-api-backend"
-type = "javascript"
+main = "src/index.js"
 account_id = "852321b697292f45342af47cbb152cb7"
 workers_dev = true
-route = ""
-zone_id = ""
+compatibility_date = "2025-02-25"
 
 # Node.js互換モードを有効化
 compatibility_flags = ["nodejs_compat"]
