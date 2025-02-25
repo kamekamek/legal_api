@@ -447,21 +447,61 @@ async function getLandUseInfo(env, lat, lng) {
   try {
     // ZENRINのAPIキーを取得
     const apiKey = env.ZENRIN_API_KEY;
+    console.log('ZENRIN_API_KEY:', apiKey ? 'APIキーが設定されています' : 'APIキーが設定されていません');
+    
     if (!apiKey) {
       throw new Error('ZENRIN_API_KEYが設定されていません');
     }
 
-    // ZENRINのAPIを呼び出す
+    // 正しいエンドポイントを使用
+    const url = 'https://test-web.zmaps-api.com/map/wms/youto';
+    
+    // 座標を EPSG:4326 から EPSG:3857 に変換
+    const lon = parseFloat(lng);
+    const lat = parseFloat(lat);
+    const x = lon * 20037508.34 / 180;
+    const y = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180) * 20037508.34 / 180;
+    
+    // バッファを追加（約500mの範囲）
+    const buffer = 500;
+    const xMin = x - buffer;
+    const xMax = x + buffer;
+    const yMin = y - buffer;
+    const yMax = y + buffer;
+
+    const wmsParams = {
+      'VERSION': '1.3.0',
+      'REQUEST': 'GetFeatureInfo',
+      'LAYERS': 'lp1',
+      'QUERY_LAYERS': 'lp1',
+      'INFO_FORMAT': 'application/json',
+      'I': '400',
+      'J': '300',
+      'WIDTH': '800',
+      'HEIGHT': '600',
+      'FORMAT': 'image/png',
+      'FEATURE_COUNT': '1',
+      'BBOX': `${xMin},${yMin},${xMax},${yMax}`,
+      'CRS': 'EPSG:3857'
+    };
+
+    // 正しい認証ヘッダーを使用
     const response = await fetch(
-      `https://api.zenrin.jp/legal/landuse?lat=${lat}&lng=${lng}`,
+      `${url}`,
       {
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${apiKey}`
-        }
+          'x-api-key': apiKey,
+          'Authorization': 'referer',
+          'Referer': 'https://legal-api-frontend.pages.dev/'
+        },
+        params: wmsParams
       }
     );
-
+    
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Zenrin API Error Response:', errorText);
       throw new Error('用途地域情報の取得に失敗しました');
     }
 
