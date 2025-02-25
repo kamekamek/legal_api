@@ -30,8 +30,10 @@ import LegalInfo from '../legal/LegalInfo';
 import {
   YOUTO_MAPPING,
   BOUKA_MAPPING,
-  ZONE_DIVISION_MAPPING
-} from '../legal/constants/zoneTypes';
+  ZONE_DIVISION_MAPPING,
+  HEIGHT_DISTRICT_MAPPING,
+  FIRE_AREA_MAPPING
+} from '../../constants/zoneTypes';
 import { parseHeightDistrict, parseScenicDistrict } from '../legal/utils/zoneUtils';
 import KokujiDialog from '../legal/components/KokujiDialog';
 import CloseIcon from '@mui/icons-material/Close';
@@ -80,6 +82,13 @@ const ProjectDetail = () => {
           
           if (legalResponse.ok && legalData.status === 'success' && legalData.data) {
             console.log('法令情報の詳細:', JSON.stringify(legalData.data, null, 2));
+            // 用途地域情報のデバッグ
+            if (legalData.data.type) {
+              console.log('用途地域タイプ:', legalData.data.type);
+              console.log('用途地域名称:', YOUTO_MAPPING[legalData.data.type] || '未定義');
+            } else {
+              console.log('用途地域情報がありません');
+            }
             setLegalInfo(legalData.data);
           } else {
             console.warn('法令情報の取得に失敗しました:', legalData);
@@ -258,38 +267,89 @@ const ProjectDetail = () => {
         <InfoRow label="所在地" value={project?.location} />
         <InfoRow label="用途地域" value={(() => {
           if (!legalInfo.type) return '−';
+          
           // 用途地域の表示を修正
           console.log('用途地域タイプ:', legalInfo.type);
-          console.log('YOUTO_MAPPING:', YOUTO_MAPPING);
           
-          // 数値文字列の場合はマッピングを使用
-          if (YOUTO_MAPPING[legalInfo.type]) {
-            return YOUTO_MAPPING[legalInfo.type];
+          // 数値の場合は直接マッピングを試みる
+          const zoneTypeName = YOUTO_MAPPING[legalInfo.type];
+          
+          if (zoneTypeName) {
+            return zoneTypeName;
           }
           
-          // 直接文字列が入っている場合はそのまま表示
+          // マッピングにない場合はそのまま表示
           return legalInfo.type || '−';
         })()} />
-        <InfoRow label="防火地域" value={legalInfo.fireArea ? BOUKA_MAPPING[legalInfo.fireArea] : '−'} />
+        <InfoRow label="防火地域" value={(() => {
+          if (!legalInfo.fireArea) return '−';
+          
+          // 防火地域の表示を修正
+          console.log('防火地域タイプ:', legalInfo.fireArea);
+          
+          // 数値の場合は直接マッピングを試みる
+          const fireAreaName = BOUKA_MAPPING[legalInfo.fireArea];
+          
+          if (fireAreaName) {
+            return fireAreaName;
+          }
+          
+          // 文字列の場合はFIRE_AREA_MAPPINGを試す
+          const fireAreaNameFromText = FIRE_AREA_MAPPING[legalInfo.fireArea];
+          if (fireAreaNameFromText) {
+            return fireAreaNameFromText;
+          }
+          
+          // マッピングにない場合はそのまま表示
+          return legalInfo.fireArea || '−';
+        })()} />
         <InfoRow label="建蔽率" value={legalInfo.buildingCoverageRatio ? `${legalInfo.buildingCoverageRatio}%` : '−'} />
         <InfoRow label="建蔽率（制限値）" value={legalInfo.buildingCoverageRatio2 ? `${legalInfo.buildingCoverageRatio2}%` : '−'} />
         <InfoRow label="容積率" value={legalInfo.floorAreaRatio ? `${legalInfo.floorAreaRatio}%` : '−'} />
         <InfoRow label="高度地区" value={(() => {
           if (!legalInfo.heightDistrict || legalInfo.heightDistrict === '0') return '−';
+          
+          // HEIGHT_DISTRICT_MAPPINGを使用して高度地区名を取得
+          const heightDistrictName = HEIGHT_DISTRICT_MAPPING[legalInfo.heightDistrict];
+          if (heightDistrictName) {
+            return heightDistrictName;
+          }
+          
+          // マッピングにない場合はparseHeightDistrictを使用
           const height = parseHeightDistrict(legalInfo.heightDistrict);
           if (!height) return '−';
           return height.join('\n');
         })()} />
         <InfoRow label="高度地区（制限値）" value={(() => {
           if (!legalInfo.heightDistrict2 || legalInfo.heightDistrict2 === '0') return '−';
+          
+          // HEIGHT_DISTRICT_MAPPINGを使用して高度地区名を取得
+          const heightDistrictName = HEIGHT_DISTRICT_MAPPING[legalInfo.heightDistrict2];
+          if (heightDistrictName) {
+            return heightDistrictName;
+          }
+          
+          // マッピングにない場合はparseHeightDistrictを使用
           const height = parseHeightDistrict(legalInfo.heightDistrict2);
           if (!height) return '−';
           return height.join('\n');
         })()} />
         <InfoRow label="区域区分" value={(() => {
           if (!legalInfo.zoneMap) return '−';
+          console.log('区域区分情報:', legalInfo.zoneMap);
+          
+          // コロン区切りの場合は最初の部分を取得
           const parts = legalInfo.zoneMap.split(':');
-          return ZONE_DIVISION_MAPPING[parts[0]] || '−';
+          const zoneKey = parts[0];
+          
+          // マッピングを使用して区域区分名を取得
+          const zoneDivisionName = ZONE_DIVISION_MAPPING[zoneKey];
+          if (zoneDivisionName) {
+            return zoneDivisionName;
+          }
+          
+          // マッピングにない場合はそのまま表示
+          return zoneKey || '−';
         })()} />
         <InfoRow label="風致地区" value={(() => {
           const scenic = parseScenicDistrict(legalInfo.scenicZoneName, legalInfo.scenicZoneType);
