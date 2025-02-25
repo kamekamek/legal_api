@@ -6,6 +6,7 @@ import ProjectList from './features/projects/ProjectList';
 import ProjectForm from './features/projects/ProjectForm';
 import ProjectDetail from './features/projects/ProjectDetail';
 import ZoneSearch from './features/legal/ZoneSearch';
+import Navigation from './components/Navigation';
 
 const theme = createTheme({
   palette: {
@@ -34,6 +35,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
+        <Navigation />
         <Routes>
           <Route path="/" element={<ProjectList />} />
           <Route path="/projects" element={<ProjectList />} />

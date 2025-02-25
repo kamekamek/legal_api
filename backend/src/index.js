@@ -725,6 +725,50 @@ export default {
         );
       }
 
+      // プロジェクト削除エンドポイント
+      if (path.match(/^\/api\/v1\/projects\/[^\/]+$/) && request.method === 'DELETE') {
+        const id = path.split('/').pop();
+        try {
+          const supabase = initSupabase(env);
+          const { error } = await supabase
+            .from('projects')
+            .delete()
+            .eq('id', id);
+
+          if (error) throw error;
+          
+          return new Response(
+            JSON.stringify({ 
+              status: 'success',
+              message: 'プロジェクトが削除されました' 
+            }),
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(request)
+              }
+            }
+          );
+        } catch (error) {
+          console.error('Error deleting project:', error);
+          return new Response(
+            JSON.stringify({ 
+              status: 'error',
+              error: {
+                message: error.message || 'プロジェクトの削除に失敗しました'
+              }
+            }),
+            {
+              status: 500,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(request)
+              }
+            }
+          );
+        }
+      }
+
       // 法令情報取得エンドポイント
       if (path.match(/^\/api\/v1\/projects\/[^\/]+\/legal-info$/) && request.method === 'GET') {
         const projectId = path.split('/')[4];

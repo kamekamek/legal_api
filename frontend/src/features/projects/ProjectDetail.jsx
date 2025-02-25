@@ -79,6 +79,7 @@ const ProjectDetail = () => {
           console.log('取得した法令情報:', legalData);
           
           if (legalResponse.ok && legalData.status === 'success' && legalData.data) {
+            console.log('法令情報の詳細:', JSON.stringify(legalData.data, null, 2));
             setLegalInfo(legalData.data);
           } else {
             console.warn('法令情報の取得に失敗しました:', legalData);
@@ -255,7 +256,20 @@ const ProjectDetail = () => {
     return (
       <Box sx={{ width: '100%' }}>
         <InfoRow label="所在地" value={project?.location} />
-        <InfoRow label="用途地域" value={legalInfo.type ? YOUTO_MAPPING[legalInfo.type] : '−'} />
+        <InfoRow label="用途地域" value={(() => {
+          if (!legalInfo.type) return '−';
+          // 用途地域の表示を修正
+          console.log('用途地域タイプ:', legalInfo.type);
+          console.log('YOUTO_MAPPING:', YOUTO_MAPPING);
+          
+          // 数値文字列の場合はマッピングを使用
+          if (YOUTO_MAPPING[legalInfo.type]) {
+            return YOUTO_MAPPING[legalInfo.type];
+          }
+          
+          // 直接文字列が入っている場合はそのまま表示
+          return legalInfo.type || '−';
+        })()} />
         <InfoRow label="防火地域" value={legalInfo.fireArea ? BOUKA_MAPPING[legalInfo.fireArea] : '−'} />
         <InfoRow label="建蔽率" value={legalInfo.buildingCoverageRatio ? `${legalInfo.buildingCoverageRatio}%` : '−'} />
         <InfoRow label="建蔽率（制限値）" value={legalInfo.buildingCoverageRatio2 ? `${legalInfo.buildingCoverageRatio2}%` : '−'} />
