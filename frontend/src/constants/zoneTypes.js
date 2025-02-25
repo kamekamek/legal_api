@@ -66,48 +66,67 @@ export const HEIGHT_DISTRICT_MAPPING = {
 
 // 高度地区情報を解析する関数
 export const parseHeightDistrict = (heightInfo) => {
-  console.log('高度地区情報の入力値:', heightInfo);
-  
   if (!heightInfo || heightInfo === '0') {
-    console.log('高度地区情報なし');
     return null;
   }
   
+  // 数値+mの場合は最高高度を表す（例: "60m" → "最高高度60m"）
+  if (/^(\d+)m$/.test(heightInfo)) {
+    const height = heightInfo.match(/^(\d+)m$/)[1];
+    return [`最高高度${height}m`];
+  }
+  
+  // -数値+mの場合は最低高度を表す（例: "-10m" → "最低高度10m"）
+  if (/^-(\d+)m$/.test(heightInfo)) {
+    const height = heightInfo.match(/^-(\d+)m$/)[1];
+    return [`最低高度${height}m`];
+  }
+  
   // 数値のみの場合は高度地区種別として扱う
-  if (!isNaN(heightInfo)) {
-    console.log('数値のみの高度地区情報:', heightInfo);
-    const result = [`最高高度規制: ${HEIGHT_DISTRICT_MAPPING[heightInfo]}`];
-    console.log('解析結果:', result);
-    return result;
+  if (/^\d+$/.test(heightInfo)) {
+    return [`第${heightInfo}種高度地区`];
   }
   
-  const parts = heightInfo.split(':');
-  console.log('高度地区情報の分割結果:', parts);
+  // コロン区切りの場合は複数の情報を含む
+  if (heightInfo.includes(':')) {
+    const parts = heightInfo.split(':');
+    const result = [];
+    
+    // 各部分を解析
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (!part) continue;
+      
+      // 数値+mの形式は高度を表す
+      if (/^(\d+)m$/.test(part)) {
+        const height = part.match(/^(\d+)m$/)[1];
+        result.push(`最高高度${height}m`);
+      }
+      // -数値+mの形式は最低高度を表す
+      else if (/^-(\d+)m$/.test(part)) {
+        const height = part.match(/^-(\d+)m$/)[1];
+        result.push(`最低高度${height}m`);
+      }
+      // 数値のみの場合は種別を表す
+      else if (/^\d+$/.test(part)) {
+        result.push(`第${part}種高度地区`);
+      }
+      // -数値の場合は最低高度地区を表す
+      else if (/^-\d+$/.test(part)) {
+        const type = part.substring(1);
+        result.push(`第${type}種最低高度地区`);
+      }
+      // その他の形式はそのまま表示
+      else if (part) {
+        result.push(part);
+      }
+    }
+    
+    return result.length > 0 ? result : null;
+  }
   
-  const result = [];
-
-  // 最高高度（例: "9m"）
-  if (parts[0] && parts[0].includes('m')) {
-    result.push(`最高高度: ${parts[0]}`);
-  }
-
-  // 最低高度（例: "-9m"）
-  if (parts[1] && parts[1].includes('m')) {
-    result.push(`最低高度: ${parts[1]}`);
-  }
-
-  // 最高高度規制（例: "9" → "第9種高度地区"）
-  if (parts[2] && !parts[2].includes('m')) {
-    result.push(`最高高度規制: ${HEIGHT_DISTRICT_MAPPING[parts[2]]}`);
-  }
-
-  // 最低高度規制（例: "-9" → "第9種最低高度地区"）
-  if (parts[3] && !parts[3].includes('m')) {
-    result.push(`最低高度規制: ${HEIGHT_DISTRICT_MAPPING[parts[3]]}`);
-  }
-
-  console.log('解析結果:', result);
-  return result.length > 0 ? result : null;
+  // その他の形式はそのまま表示
+  return [heightInfo];
 };
 
 // 区域区分情報を解析する関数

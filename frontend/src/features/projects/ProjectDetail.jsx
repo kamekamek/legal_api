@@ -261,13 +261,13 @@ const ProjectDetail = () => {
         <InfoRow label="建蔽率（制限値）" value={legalInfo.buildingCoverageRatio2 ? `${legalInfo.buildingCoverageRatio2}%` : '−'} />
         <InfoRow label="容積率" value={legalInfo.floorAreaRatio ? `${legalInfo.floorAreaRatio}%` : '−'} />
         <InfoRow label="高度地区" value={(() => {
-          if (!legalInfo.heightDistrict) return '−';
+          if (!legalInfo.heightDistrict || legalInfo.heightDistrict === '0') return '−';
           const height = parseHeightDistrict(legalInfo.heightDistrict);
           if (!height) return '−';
           return height.join('\n');
         })()} />
         <InfoRow label="高度地区（制限値）" value={(() => {
-          if (!legalInfo.heightDistrict2) return '−';
+          if (!legalInfo.heightDistrict2 || legalInfo.heightDistrict2 === '0') return '−';
           const height = parseHeightDistrict(legalInfo.heightDistrict2);
           if (!height) return '−';
           return height.join('\n');

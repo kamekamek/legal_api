@@ -715,25 +715,34 @@ const ZoneSearch = () => {
   };
 
   const handleSaveToProject = async () => {
-    if (!landUseInfo || !projectId) return;
+    if (!landUseInfo || !projectId) {
+      console.error('保存できません: landUseInfo または projectId が未設定です', { landUseInfo, projectId });
+      return;
+    }
 
     try {
+      console.log('保存開始: 法令情報データ', landUseInfo);
+      console.log('保存開始: 建築規制情報', buildingRegulations);
+      
       // APIの期待する形式にデータを変換
       const legalInfoData = {
         type: landUseInfo.type,
-        fire_area: landUseInfo.fireArea,
-        building_coverage_ratio: parseFloat(landUseInfo.buildingCoverageRatio),
-        building_coverage_ratio2: parseFloat(landUseInfo.buildingCoverageRatio2),
-        floor_area_ratio: parseFloat(landUseInfo.floorAreaRatio),
-        height_district: landUseInfo.heightDistrict,
-        height_district2: landUseInfo.heightDistrict2,
-        zone_map: landUseInfo.zoneMap,
-        scenic_zone_name: landUseInfo.scenicZoneName,
-        scenic_zone_type: landUseInfo.scenicZoneType,
-        article_48: buildingRegulations ? buildingRegulations['建築基準法第48条本文'] : null,
-        appendix_2: buildingRegulations ? buildingRegulations['法別表第2本文'] : null,
-        safety_ordinance: null  // 現時点では未実装
+        fireArea: landUseInfo.fireArea,
+        buildingCoverageRatio: parseFloat(landUseInfo.buildingCoverageRatio),
+        buildingCoverageRatio2: parseFloat(landUseInfo.buildingCoverageRatio2),
+        floorAreaRatio: parseFloat(landUseInfo.floorAreaRatio),
+        heightDistrict: landUseInfo.heightDistrict,
+        heightDistrict2: landUseInfo.heightDistrict2,
+        zoneMap: landUseInfo.zoneMap,
+        scenicZoneName: landUseInfo.scenicZoneName,
+        scenicZoneType: landUseInfo.scenicZoneType,
+        article48: buildingRegulations ? buildingRegulations['建築基準法第48条本文'] : null,
+        appendix2: buildingRegulations ? buildingRegulations['法別表第2本文'] : null,
+        safetyOrdinance: null  // 現時点では未実装
       };
+
+      console.log('APIリクエスト用データ:', legalInfoData);
+      console.log('APIエンドポイント:', `${API_URL}/api/v1/projects/${projectId}/legal-info`);
 
       // 法令情報を保存
       const response = await fetch(`${API_URL}/api/v1/projects/${projectId}/legal-info`, {
@@ -746,6 +755,7 @@ const ZoneSearch = () => {
 
       const responseData = await response.json();
       console.log('法令情報保存レスポンス:', responseData);
+      console.log('レスポンスステータス:', response.status, response.ok);
 
       if (!response.ok) {
         throw new Error(responseData.error?.message || '法令情報の更新に失敗しました');
@@ -753,6 +763,8 @@ const ZoneSearch = () => {
 
       // 告示文を保存（存在する場合）
       if (kokujiText) {
+        console.log('告示文保存開始:', { kokuji_id: '412K500040001453' });
+        
         const kokujiResponse = await fetch(`${API_URL}/api/v1/projects/${projectId}/kokuji`, {
           method: 'POST',
           headers: {
@@ -765,8 +777,12 @@ const ZoneSearch = () => {
           }),
         });
 
+        const kokujiResponseData = await kokujiResponse.json();
+        console.log('告示文保存レスポンス:', kokujiResponseData);
+        console.log('告示文レスポンスステータス:', kokujiResponse.status, kokujiResponse.ok);
+
         if (!kokujiResponse.ok) {
-          console.warn('告示文の保存に失敗しました:', await kokujiResponse.text());
+          console.warn('告示文の保存に失敗しました:', kokujiResponseData);
         }
       }
 
@@ -1091,7 +1107,7 @@ const ZoneSearch = () => {
                       />
                       <InfoRow 
                         label="高度地区" 
-                        value={landUseInfo?.heightDistrict ? (() => {
+                        value={landUseInfo?.heightDistrict && landUseInfo.heightDistrict !== '0' ? (() => {
                           const height = parseHeightDistrict(landUseInfo.heightDistrict);
                           if (!height) return '−';
                           return height.join('\n');
@@ -1099,7 +1115,7 @@ const ZoneSearch = () => {
                       />
                       <InfoRow 
                         label="高度地区（制限値）" 
-                        value={landUseInfo?.heightDistrict2 ? (() => {
+                        value={landUseInfo?.heightDistrict2 && landUseInfo.heightDistrict2 !== '0' ? (() => {
                           const height = parseHeightDistrict(landUseInfo.heightDistrict2);
                           if (!height) return '−';
                           return height.join('\n');

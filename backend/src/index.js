@@ -64,6 +64,50 @@ async function getProjectById(env, id) {
   }
 }
 
+// プロジェクトを作成する関数
+async function createProject(env, projectData) {
+  try {
+    const supabase = initSupabase(env);
+    
+    // バリデーション
+    const { name, description, status, location } = projectData;
+    if (!name || !status) {
+      throw new Error('必須フィールドが不足しています');
+    }
+
+    // ステータスの値を検証
+    const validStatuses = ['planning', 'in_progress', 'completed', 'on_hold'];
+    if (!validStatuses.includes(status)) {
+      throw new Error('無効なステータスです');
+    }
+
+    const { data, error } = await supabase
+      .from('projects')
+      .insert([{
+        name,
+        description,
+        status,
+        location,
+        created_at: new Date(),
+        updated_at: new Date()
+      }])
+      .select()
+      .single();
+    
+    if (error) {
+      if (error.code === '23505') {
+        throw new Error('プロジェクト名が既に使用されています');
+      }
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Project creation error:', error);
+    throw error;
+  }
+}
+
 // 法令情報を取得する関数
 async function getLegalInfo(env, projectId) {
   try {
@@ -131,20 +175,24 @@ async function saveLegalInfo(env, projectId, legalInfo) {
     const dbData = {
       project_id: projectId,
       type: legalInfo.type,
-      fire_area: legalInfo.fireArea,
-      building_coverage_ratio: legalInfo.buildingCoverageRatio,
-      building_coverage_ratio2: legalInfo.buildingCoverageRatio2,
-      floor_area_ratio: legalInfo.floorAreaRatio,
-      height_district: legalInfo.heightDistrict,
-      height_district2: legalInfo.heightDistrict2,
-      zone_map: legalInfo.zoneMap,
-      scenic_zone_name: legalInfo.scenicZoneName,
-      scenic_zone_type: legalInfo.scenicZoneType,
-      article_48: legalInfo.article48,
-      appendix_2: legalInfo.appendix2,
-      safety_ordinance: legalInfo.safetyOrdinance,
+      fire_area: legalInfo.fireArea || null,
+      building_coverage_ratio: legalInfo.buildingCoverageRatio || null,
+      building_coverage_ratio2: legalInfo.buildingCoverageRatio2 || null,
+      floor_area_ratio: legalInfo.floorAreaRatio || null,
+      height_district: legalInfo.heightDistrict || null,
+      height_district2: legalInfo.heightDistrict2 || null,
+      zone_map: legalInfo.zoneMap || null,
+      scenic_zone_name: legalInfo.scenicZoneName || null,
+      scenic_zone_type: legalInfo.scenicZoneType || null,
+      article_48: legalInfo.article48 || null,
+      appendix_2: legalInfo.appendix2 || null,
+      safety_ordinance: legalInfo.safetyOrdinance || null,
       updated_at: new Date()
     };
+
+    // リクエストデータのデバッグログ
+    console.log('法令情報保存リクエスト:', legalInfo);
+    console.log('変換後のDBデータ:', dbData);
 
     // 既存データの確認
     const { data: existingData, error: existingError } = await supabase
@@ -153,27 +201,38 @@ async function saveLegalInfo(env, projectId, legalInfo) {
       .eq('project_id', projectId)
       .single();
 
+    console.log('既存データ確認結果:', { existingData, existingError });
+
     let result;
     
     if (!existingData) {
       // 新規作成
+      console.log('新規データ作成開始');
       dbData.created_at = new Date();
       result = await supabase
         .from('legal_info')
         .insert([dbData])
         .select()
         .single();
+      console.log('新規データ作成結果:', result);
     } else {
       // 更新
+      console.log('既存データ更新開始:', existingData);
       result = await supabase
         .from('legal_info')
         .update(dbData)
         .eq('project_id', projectId)
         .select()
         .single();
+      console.log('データ更新結果:', result);
     }
 
-    if (result.error) throw result.error;
+    if (result.error) {
+      console.error('データベース操作エラー:', result.error);
+      throw result.error;
+    }
+
+    console.log('法令情報保存成功:', result.data);
 
     return {
       status: 'success',
@@ -554,8 +613,8 @@ async function getLandUseInfo(env, lat, lng) {
       fireArea: properties.bouka?.toString() || null,
       buildingCoverageRatio: (properties.kenpei?.toString() || '60').replace(/%/g, ''),
       floorAreaRatio: (properties.yoseki?.toString() || '200').replace(/%/g, ''),
-      heightDistrict: properties.koudo?.toString() || null,
-      heightDistrict2: properties.koudo2?.toString() || null,
+      heightDistrict: properties.koudo?.toString() === '0' ? null : properties.koudo?.toString() || null,
+      heightDistrict2: properties.koudo2?.toString() === '0' ? null : properties.koudo2?.toString() || null,
       zoneMap: properties.map?.toString() || null,
       zoneMap2: properties.map2?.toString() || null,
       buildingCoverageRatio2: properties.kenpei2?.toString() || null,
@@ -613,6 +672,44 @@ export default {
         );
       }
 
+      // プロジェクト作成エンドポイント
+      if (path === '/api/v1/projects' && request.method === 'POST') {
+        const requestData = await request.json();
+        try {
+          const data = await createProject(env, requestData);
+          return new Response(
+            JSON.stringify(data),
+            {
+              status: 201,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(request)
+              }
+            }
+          );
+        } catch (error) {
+          let statusCode = 500;
+          if (error.message.includes('必須フィールド') || 
+              error.message.includes('無効な') ||
+              error.message.includes('既に使用されています')) {
+            statusCode = 400;
+          }
+          
+          return new Response(
+            JSON.stringify({ 
+              error: error.message
+            }),
+            {
+              status: statusCode,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(request)
+              }
+            }
+          );
+        }
+      }
+
       // プロジェクト詳細エンドポイント
       if (path.match(/^\/api\/v1\/projects\/[^\/]+$/) && request.method === 'GET') {
         const id = path.split('/').pop();
@@ -646,17 +743,42 @@ export default {
       // 法令情報保存エンドポイント
       if (path.match(/^\/api\/v1\/projects\/[^\/]+\/legal-info$/) && request.method === 'POST') {
         const projectId = path.split('/')[4];
-        const requestData = await request.json();
-        const data = await saveLegalInfo(env, projectId, requestData);
-        return new Response(
-          JSON.stringify(data),
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders(request)
+        console.log('法令情報保存リクエスト受信:', { projectId, path });
+        
+        try {
+          const requestData = await request.json();
+          console.log('法令情報保存リクエストデータ:', requestData);
+          
+          const data = await saveLegalInfo(env, projectId, requestData);
+          console.log('法令情報保存結果:', data);
+          
+          return new Response(
+            JSON.stringify(data),
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(request)
+              }
             }
-          }
-        );
+          );
+        } catch (error) {
+          console.error('法令情報保存エラー:', error);
+          return new Response(
+            JSON.stringify({
+              status: 'error',
+              error: {
+                message: error.message || '法令情報の保存に失敗しました'
+              }
+            }),
+            {
+              status: 500,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(request)
+              }
+            }
+          );
+        }
       }
 
       // 告示文一覧取得エンドポイント
