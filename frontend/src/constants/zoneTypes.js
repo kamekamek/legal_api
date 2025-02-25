@@ -12,7 +12,7 @@ export const YOUTO_MAPPING = {
   61: '準工業地域',
   62: '工業地域',
   63: '工業専用地域',
-  71: '無指定'
+  71: '指定なし'
 };
 
 export const BOUKA_MAPPING = {
