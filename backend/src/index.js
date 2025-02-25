@@ -528,10 +528,42 @@ async function getLandUseInfo(env, lat, lng) {
     }
 
     const data = await response.json();
-    return {
-      status: 'success',
-      data: data
+    console.log('Zenrin API Response:', JSON.stringify(data, null, 2));
+    
+    // レスポンスデータの整形
+    if (!data || !data.features || data.features.length === 0) {
+      return {
+        type: null,
+        fireArea: null,
+        buildingCoverageRatio: null,
+        buildingCoverageRatio2: null,
+        floorAreaRatio: null,
+        heightDistrict: null,
+        heightDistrict2: null,
+        zoneMap: null,
+        scenicZoneName: null,
+        scenicZoneType: null
+      };
+    }
+    
+    const feature = data.features[0];
+    const properties = feature.properties;
+    
+    const formattedData = {
+      type: properties.youto?.toString() || null,
+      fireArea: properties.bouka?.toString() || null,
+      buildingCoverageRatio: (properties.kenpei?.toString() || '60').replace(/%/g, ''),
+      floorAreaRatio: (properties.yoseki?.toString() || '200').replace(/%/g, ''),
+      heightDistrict: properties.koudo?.toString() || null,
+      heightDistrict2: properties.koudo2?.toString() || null,
+      zoneMap: properties.map?.toString() || null,
+      zoneMap2: properties.map2?.toString() || null,
+      buildingCoverageRatio2: properties.kenpei2?.toString() || null,
+      scenicZoneName: properties.f_meisho?.toString() || null,
+      scenicZoneType: properties.f_shu?.toString() || null
     };
+    
+    return formattedData;
   } catch (error) {
     console.error('Error getting landuse info:', error);
     throw error;
@@ -789,16 +821,37 @@ export default {
             }
           );
         }
-        const data = await getLandUseInfo(env, lat, lng);
-        return new Response(
-          JSON.stringify(data),
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders(request)
+        
+        try {
+          const data = await getLandUseInfo(env, lat, lng);
+          return new Response(
+            JSON.stringify(data),
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(request)
+              }
             }
-          }
-        );
+          );
+        } catch (error) {
+          console.error('用途地域情報取得エラー:', error);
+          return new Response(
+            JSON.stringify({ 
+              status: 'error',
+              error: {
+                code: '500',
+                message: error.message || '用途地域情報の取得に失敗しました'
+              }
+            }),
+            {
+              status: 500,
+              headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(request)
+              }
+            }
+          );
+        }
       }
 
       // 建築計算結果取得エンドポイント

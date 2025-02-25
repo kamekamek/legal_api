@@ -173,15 +173,39 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const fetchBuildingRegulations = async (youtoType) => {
   try {
+    console.log('建築規制情報取得開始:', { youtoType, targetArea: YOUTO_MAPPING[youtoType] });
+    
+    if (!youtoType || !YOUTO_MAPPING[youtoType]) {
+      console.warn('用途地域情報が不正です:', youtoType);
+      return {
+        '建築基準法第48条本文': null,
+        '法別表第2本文': null
+      };
+    }
+    
     const response = await axios.get('https://script.google.com/macros/s/AKfycbxI3QyrADAp4PbSssg1QFbdlgQEYOVFrnmCjCjc9I55QOTJHz3LHLzTCUAsDhfvTAH8ng/exec', {
       params: {
         targetArea: YOUTO_MAPPING[youtoType]
-      }
+      },
+      timeout: 10000 // 10秒でタイムアウト
     });
+    
+    console.log('建築規制情報取得レスポンス:', response.data);
+    
+    if (!response.data) {
+      return {
+        '建築基準法第48条本文': null,
+        '法別表第2本文': null
+      };
+    }
+    
     return response.data;
   } catch (error) {
     console.error('建築規制情報の取得に失敗しました:', error);
-    throw error;
+    return {
+      '建築基準法第48条本文': null,
+      '法別表第2本文': null
+    };
   }
 };
 
@@ -354,37 +378,59 @@ const ZoneSearch = () => {
 
   const fetchLandUseInfo = async (lat, lng) => {
     try {
+      console.log('用途地域情報取得開始:', { lat, lng });
+      
       const response = await axios.get(`${API_URL}/api/v1/legal/landuse`, {
-        params: { lat, lng }
+        params: { lat, lng },
+        timeout: 10000 // 10秒でタイムアウト
       });
 
-      if (response.data) {
-        setLandUseInfo(response.data);
-        
-        // 用途地域情報が取得できた場合、建築規制情報も取得
-        if (response.data.type) {
-          try {
-            const regulations = await fetchBuildingRegulations(response.data.type);
-            setBuildingRegulations(regulations);
-          } catch (error) {
-            console.error('建築規制情報の取得に失敗しました:', error);
-            setError('建築規制情報の取得に失敗しました');
-          }
-        }
-        
-        // 固定の告示ID「412K500040001453」で告示文を取得する
+      console.log('用途地域情報取得レスポンス:', response.data);
+      
+      // レスポンスデータの確認
+      if (!response.data) {
+        setError('用途地域情報の取得に失敗しました');
+        return;
+      }
+      
+      setLandUseInfo(response.data);
+      
+      // 用途地域情報が取得できた場合、建築規制情報も取得
+      if (response.data.type) {
         try {
-          const kokujiId = '412K500040001453';
-          console.log('告示文取得開始:', { kokujiId });
-          await fetchKokujiText(kokujiId);
+          const regulations = await fetchBuildingRegulations(response.data.type);
+          setBuildingRegulations(regulations);
         } catch (error) {
-          console.error('告示文取得エラー:', error);
-          setError('告示文の取得に失敗しました');
+          console.error('建築規制情報の取得に失敗しました:', error);
+          setError('建築規制情報の取得に失敗しました');
         }
+      } else {
+        console.warn('用途地域情報が取得できませんでした');
+        setBuildingRegulations({
+          '建築基準法第48条本文': null,
+          '法別表第2本文': null
+        });
+      }
+      
+      // 固定の告示ID「412K500040001453」で告示文を取得する
+      try {
+        const kokujiId = '412K500040001453';
+        console.log('告示文取得開始:', { kokujiId });
+        await fetchKokujiText(kokujiId);
+      } catch (error) {
+        console.error('告示文取得エラー:', error);
+        setError('告示文の取得に失敗しました');
       }
     } catch (error) {
       console.error('用途地域情報取得エラー:', error);
       setError('用途地域情報の取得に失敗しました');
+      
+      // エラー時にも空のデータをセットして表示を更新
+      setLandUseInfo(null);
+      setBuildingRegulations({
+        '建築基準法第48条本文': null,
+        '法別表第2本文': null
+      });
     }
   };
 
@@ -1023,61 +1069,102 @@ const ZoneSearch = () => {
                       width: '100%'
                     }}>
                       <InfoRow label="所在地" value={address} />
-                      <InfoRow label="用途地域" value={landUseInfo?.type ? YOUTO_MAPPING[landUseInfo.type] || '−' : '−'} />
-                      <InfoRow label="防火地域" value={landUseInfo?.fireArea ? BOUKA_MAPPING[landUseInfo.fireArea] || '−' : '−'} />
-                      <InfoRow label="建蔽率" value={landUseInfo?.buildingCoverageRatio ? `${landUseInfo.buildingCoverageRatio}%` : '−'} />
-                      <InfoRow label="建蔽率（制限値）" value={landUseInfo?.buildingCoverageRatio2 ? `${landUseInfo.buildingCoverageRatio2}%` : '−'} />
-                      <InfoRow label="容積率" value={landUseInfo?.floorAreaRatio ? `${landUseInfo.floorAreaRatio}%` : '−'} />
-                      <InfoRow label="高度地区" value={landUseInfo?.heightDistrict ? (() => {
-                        const height = parseHeightDistrict(landUseInfo.heightDistrict);
-                        if (!height) return '−';
-                        return height.join('\n');
-                      })() : '−'} />
-                      <InfoRow label="高度地区（制限値）" value={landUseInfo?.heightDistrict2 ? (() => {
-                        const height = parseHeightDistrict(landUseInfo.heightDistrict2);
-                        if (!height) return '−';
-                        return height.join('\n');
-                      })() : '−'} />
-                      <InfoRow label="区域区分" value={landUseInfo?.zoneMap ? (() => {
-                        const parts = landUseInfo.zoneMap.split(':');
-                        return ZONE_DIVISION_MAPPING[parts[0]] || '−';
-                      })() : '−'} />
-                      <InfoRow label="風致地区" value={(() => {
-                        const scenic = parseScenicDistrict(landUseInfo?.scenicZoneName, landUseInfo?.scenicZoneType);
-                        if (!scenic) return '−';
-                        return [
-                          scenic.name,
-                          scenic.type && `第${scenic.type}種`
-                        ].filter(Boolean).join(' ');
-                      })()} />
+                      <InfoRow 
+                        label="用途地域" 
+                        value={landUseInfo?.type ? YOUTO_MAPPING[landUseInfo.type] || '−' : '−'} 
+                      />
+                      <InfoRow 
+                        label="防火地域" 
+                        value={landUseInfo?.fireArea ? BOUKA_MAPPING[landUseInfo.fireArea] || '−' : '−'} 
+                      />
+                      <InfoRow 
+                        label="建蔽率" 
+                        value={landUseInfo?.buildingCoverageRatio ? `${landUseInfo.buildingCoverageRatio}%` : '−'} 
+                      />
+                      <InfoRow 
+                        label="建蔽率（制限値）" 
+                        value={landUseInfo?.buildingCoverageRatio2 ? `${landUseInfo.buildingCoverageRatio2}%` : '−'} 
+                      />
+                      <InfoRow 
+                        label="容積率" 
+                        value={landUseInfo?.floorAreaRatio ? `${landUseInfo.floorAreaRatio}%` : '−'} 
+                      />
+                      <InfoRow 
+                        label="高度地区" 
+                        value={landUseInfo?.heightDistrict ? (() => {
+                          const height = parseHeightDistrict(landUseInfo.heightDistrict);
+                          if (!height) return '−';
+                          return height.join('\n');
+                        })() : '−'} 
+                      />
+                      <InfoRow 
+                        label="高度地区（制限値）" 
+                        value={landUseInfo?.heightDistrict2 ? (() => {
+                          const height = parseHeightDistrict(landUseInfo.heightDistrict2);
+                          if (!height) return '−';
+                          return height.join('\n');
+                        })() : '−'} 
+                      />
+                      <InfoRow 
+                        label="区域区分" 
+                        value={landUseInfo?.zoneMap ? (() => {
+                          const parts = landUseInfo.zoneMap.split(':');
+                          return ZONE_DIVISION_MAPPING[parts[0]] || '−';
+                        })() : '−'} 
+                      />
+                      <InfoRow 
+                        label="風致地区" 
+                        value={(() => {
+                          const scenic = parseScenicDistrict(landUseInfo?.scenicZoneName, landUseInfo?.scenicZoneType);
+                          if (!scenic) return '−';
+                          return [
+                            scenic.name,
+                            scenic.type && `第${scenic.type}種`
+                          ].filter(Boolean).join(' ');
+                        })()} 
+                      />
                       <InfoRow 
                         label="建築基準法48条" 
                         value={
                           buildingRegulations ? (
-                            <Button
-                              variant="contained"
-                              onClick={() => handleOpenDialog('建築基準法48条', buildingRegulations['建築基準法第48条本文'])}
-                              size="small"
-                              sx={{ ml: 'auto' }}
-                            >
-                              条文を表示
-                            </Button>
-                          ) : '取得中...'
+                            buildingRegulations['建築基準法第48条本文'] ? (
+                              <Button
+                                variant="contained"
+                                onClick={() => handleOpenDialog('建築基準法48条', buildingRegulations['建築基準法第48条本文'])}
+                                size="small"
+                                sx={{ ml: 'auto' }}
+                              >
+                                条文を表示
+                              </Button>
+                            ) : '条文なし'
+                          ) : (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <CircularProgress size={16} sx={{ mr: 1 }} />
+                              取得中...
+                            </Box>
+                          )
                         } 
                       />
                       <InfoRow 
                         label="法別表第２" 
                         value={
                           buildingRegulations ? (
-                            <Button
-                              variant="contained"
-                              onClick={() => handleOpenDialog('法別表第2', buildingRegulations['法別表第2本文'])}
-                              size="small"
-                              sx={{ ml: 'auto' }}
-                            >
-                              条文を表示
-                            </Button>
-                          ) : '取得中...'
+                            buildingRegulations['法別表第2本文'] ? (
+                              <Button
+                                variant="contained"
+                                onClick={() => handleOpenDialog('法別表第2', buildingRegulations['法別表第2本文'])}
+                                size="small"
+                                sx={{ ml: 'auto' }}
+                              >
+                                条文を表示
+                              </Button>
+                            ) : '条文なし'
+                          ) : (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <CircularProgress size={16} sx={{ mr: 1 }} />
+                              取得中...
+                            </Box>
+                          )
                         } 
                       />
                       <InfoRow 
