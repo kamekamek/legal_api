@@ -1,0 +1,94 @@
+@startuml
+
+' スタイル設定
+skinparam class {
+    BackgroundColor LightBlue
+    ArrowColor DarkBlue
+    BorderColor Navy
+}
+
+' タイトル追加
+title プロジェクト管理システム - コンポーネント構成図
+
+' メインページ
+class プロジェクト詳細画面 {
+    == データ ==
+    + プロジェクトID: string
+    + プロジェクト名: string
+    + 所在地: string
+    + ステータス: string
+    == 操作 ==
+    + プロジェクト情報表示()
+    + 法令情報取得()
+}
+
+' 法令情報検索
+abstract class 法令情報検索 {
+    + 検索実行()
+    + 結果取得()
+}
+
+class 住所検索 {
+    + 住所: string
+    + 住所から検索()
+}
+
+class 地図検索 {
+    + 緯度: number
+    + 経度: number
+    + 地図から検索()
+}
+
+' 法令情報
+class 法令情報 {
+    == 基本情報 ==
+    + 用途地域: string
+    + 建ぺい率: number
+    + 容積率: number
+    == メソッド ==
+    + 情報表示()
+    + 情報更新()
+}
+
+' 建築計算
+class 建築計算 {
+    == 入力項目 ==
+    + 敷地面積: number
+    + 前面道路幅員: number
+    == メソッド ==
+    + 面積計算()
+    + 結果保存()
+}
+
+' 関連性の定義
+住所検索 --|> 法令情報検索
+地図検索 --|> 法令情報検索
+法令情報検索 --> 法令情報: 取得 >
+プロジェクト詳細画面 o-- 法令情報: 含む >
+プロジェクト詳細画面 o-- 建築計算: 利用 >
+
+' 補足説明
+note right of 住所検索
+  住所テキストから
+  法令情報を検索
+end note
+
+note right of 地図検索
+  地図クリックで
+  法令情報を検索
+end note
+
+note bottom of 建築計算
+  建築可能な面積を
+  計算する機能
+end note
+
+' 凡例
+legend right
+  === 関連性の説明 ===
+  --|> : 継承関係
+  o-- : 関連関係
+  --> : 依存関係
+end legend
+
+@enduml

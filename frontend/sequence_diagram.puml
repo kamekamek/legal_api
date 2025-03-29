@@ -1,0 +1,53 @@
+@startuml
+
+' タイトル追加
+title プロジェクト管理システム - 基本的な操作の流れ
+
+' 登場人物の定義
+actor 利用者 as User
+participant "画面\n(ブラウザ)" as Frontend
+participant "サーバー" as Backend
+database "データベース" as DB
+
+' テーマ設定
+skinparam sequence {
+    ArrowColor DeepSkyBlue
+    ActorBorderColor DeepSkyBlue
+    LifeLineBorderColor blue
+    ParticipantBorderColor DeepSkyBlue
+    ParticipantBackgroundColor LightBlue
+}
+
+' ステップ1: 画面を開く
+note over User #LightYellow
+  まず、プロジェクトの
+  詳細画面を開きます
+end note
+User -> Frontend: 画面を開く
+Frontend -> Backend: データを要求
+Backend -> DB: データを検索
+DB --> Backend: データを返す
+Backend --> Frontend: 画面に表示
+
+' ステップ2: 法令情報を確認
+note over User #LightYellow
+  次に、この場所の
+  法令情報を確認します
+end note
+User -> Frontend: 法令情報ボタンを押す
+Frontend -> Backend: 法令情報を要求
+Backend -> DB: 法令情報を検索
+DB --> Backend: 情報を返す
+Backend --> Frontend: 画面に表示
+
+' ステップ3: 計算実行
+note over User #LightYellow
+  最後に、建築可能な
+  面積を計算します
+end note
+User -> Frontend: 計算ボタンを押す
+Frontend -> Backend: 計算を実行
+Backend -> Backend: 計算処理
+Backend --> Frontend: 結果を表示
+
+@enduml
